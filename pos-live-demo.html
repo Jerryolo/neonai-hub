@@ -225,21 +225,29 @@ footer b{color:var(--text)}
   <div class="hero">
     <div class="eyebrow">Cryptographic accountability layer for AI decisions</div>
     <h1>Every decision signed. Every silence recorded.</h1>
-    <p>Submit a proposed AI action. Proof-of-Silence™ evaluates the available evidence and risk, returns a verdict, signs the record, and adds it to a SHA-256 hash chain. Then try to alter the history.</p>
+    <p>Submit a question. When configured, GPT-5.6 answers through the OpenAI API; otherwise the demo switches to a clearly labeled offline mode for manual answers. Proof-of-Silence™ evaluates the answer evidence and risk, signs the record, and adds it to a SHA-256 hash chain.</p>
     <div class="flow">QUESTION → EVIDENCE → RISK → VERDICT → SIGNATURE → AUDIT TRAIL</div>
   </div>
 
   <section>
     <h2>01 · Decision Gate</h2>
-    <p class="sub">A named human operator is required. No anonymous decision enters the ledger.</p>
+    <p class="sub">A named human operator is required. No anonymous question-and-answer record enters the ledger.</p>
 
     <div class="grid">
       <div class="card">
         <label for="operator">Human operator *</label>
         <input id="operator" maxlength="80" placeholder="e.g. J. Kowalski — Compliance Lead">
 
-        <label for="decision">Proposed AI decision / action *</label>
-        <textarea id="decision" maxlength="400" placeholder="e.g. Approve a €480 refund based on the verified customer case file"></textarea>
+        <label for="question">Question for GPT-5.6 *</label>
+        <textarea id="question" maxlength="800" placeholder="e.g. Should we approve a €480 refund based on the verified customer case file?"></textarea>
+
+        <div class="banner" id="offlineMode" aria-live="polite">
+          <b>OFFLINE MODE · MANUAL ANSWER REQUIRED</b>
+          <p>No OpenAI API key is configured on the local proxy. Type the answer below; it will still be evaluated, signed, and recorded.</p>
+        </div>
+
+        <label for="answer">Answer</label>
+        <textarea id="answer" maxlength="1600" placeholder="GPT-5.6 answer will appear here when the API is configured. In offline mode, enter the answer manually."></textarea>
 
         <div class="row">
           <div>
@@ -265,7 +273,7 @@ footer b{color:var(--text)}
           <span>Input evidence is complete and verified</span>
         </label>
 
-        <button class="primary" id="run">Evaluate and sign decision</button>
+        <button class="primary" id="run">Ask GPT-5.6, evaluate, and sign</button>
         <div class="verdict" id="verdict"></div>
       </div>
 
@@ -281,7 +289,7 @@ footer b{color:var(--text)}
 
   <section>
     <h2>02 · Signed Proof Chain</h2>
-    <p class="sub">Each block contains the hash of the previous block. Any change becomes visible during verification.</p>
+    <p class="sub">Each block contains the question, answer, verdict, rule, and hash of the previous block. Any change becomes visible during verification.</p>
 
     <div class="actions" style="margin-bottom:18px">
       <button class="ghost" id="verify">Verify chain</button>
@@ -320,6 +328,41 @@ let snapshot = null;
 let tamperedIndex = null;
 let systemLocked = false;
 
+let offlineMode = true;
+
+async function detectOpenAI(){
+  try{
+    const response = await fetch("/api/openai-status", {cache:"no-store"});
+    if(!response.ok) throw new Error("status unavailable");
+    const status = await response.json();
+    offlineMode = !status.configured;
+  }catch(error){
+    offlineMode = true;
+  }
+  updateOfflineMode();
+}
+
+function updateOfflineMode(){
+  $("offlineMode").classList.toggle("show", offlineMode);
+  $("answer").readOnly = !offlineMode;
+  $("run").textContent = offlineMode
+    ? "Evaluate and sign manual answer"
+    : "Ask GPT-5.6, evaluate, and sign";
+}
+
+async function askOpenAI(question){
+  const response = await fetch("/api/ask", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({question})
+  });
+  const payload = await response.json().catch(() => ({}));
+  if(!response.ok){
+    throw new Error(payload.error || "OpenAI request failed");
+  }
+  return String(payload.answer || "").trim();
+}
+
 function escapeHTML(value){
   return String(value).replace(/[&<>"']/g, c => ({
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
@@ -352,7 +395,7 @@ async function initSigning(){
     ". Keys are session-local and are not exported.";
 }
 
-async function addBlock(operator, decision, verdict, reason){
+async function addBlock(operator, question, answer, verdict, reason, rule){
   const previousHash = ledger.length
     ? ledger[ledger.length - 1].hash
     : null;
@@ -361,9 +404,11 @@ async function addBlock(operator, decision, verdict, reason){
     index:ledger.length,
     timestamp:new Date().toISOString(),
     operator,
-    decision,
+    question,
+    answer,
     verdict,
     reason,
+    rule,
     previousHash
   };
 
@@ -456,7 +501,7 @@ function renderChain(){
       <div class="decision">${
         block.verdict === "GENESIS"
           ? "Genesis block — ledger initialised"
-          : escapeHTML(block.decision)
+          : `<b>Q:</b> ${escapeHTML(block.question || block.decision || "")}<br><b>A:</b> ${escapeHTML(block.answer || "—")}`
       }</div>
       <div class="hashgrid">
         <span class="k">PREV</span>
@@ -478,6 +523,7 @@ function showVerdict(result, block){
     <div class="big">${result.verdict}</div>
     <div>${escapeHTML(result.reason)}</div>
     <small>Rule: ${escapeHTML(result.rule)}</small>
+    <small>Answer source: ${escapeHTML(result.answerSource || "OpenAI API")}</small>
     <small>SHA-256: ${shortHash(block.hash)}</small>
   `;
 }
@@ -504,13 +550,13 @@ $("run").addEventListener("click", async () => {
   }
 
   const operator = $("operator").value.trim();
-  const decision = $("decision").value.trim();
+  const question = $("question").value.trim();
 
-  if(!operator || !decision){
+  if(!operator || !question){
     $("verdict").className = "verdict show rejectv";
     $("verdict").innerHTML = `
       <div class="big">REJECT</div>
-      <div>A named operator and a decision description are required.</div>
+      <div>A named operator and a question are required.</div>
       <small>Rule: anonymous decisions are not accepted</small>
     `;
     return;
@@ -519,10 +565,43 @@ $("run").addEventListener("click", async () => {
   const confidence = Number($("confidence").value);
   const risk = $("risk").value;
   const verified = $("verified").checked;
-  const result = evaluate(confidence, risk, verified);
 
   $("run").disabled = true;
-  const block = await addBlock(operator, decision, result.verdict, result.reason);
+  let answer = $("answer").value.trim();
+  let answerSource = "manual offline input";
+  try{
+    if(!offlineMode){
+      answer = await askOpenAI(question);
+      $("answer").value = answer;
+      answerSource = "OpenAI API · gpt-5.6-sol";
+    }
+  }catch(error){
+    offlineMode = true;
+    updateOfflineMode();
+    $("answer").placeholder = "OpenAI request failed: " + error.message + ". Enter the answer manually, then run again.";
+    $("verdict").className = "verdict show waitv";
+    $("verdict").innerHTML = `
+      <div class="big">OFFLINE MODE</div>
+      <div>OpenAI is unavailable. Enter a manual answer and run again.</div>
+      <small>Rule: api_unavailable → manual answer fallback</small>
+    `;
+    $("run").disabled = false;
+    return;
+  }
+
+  if(!answer){
+    $("verdict").className = "verdict show rejectv";
+    $("verdict").innerHTML = `
+      <div class="big">REJECT</div>
+      <div>An answer is required before the record can be evaluated and signed.</div>
+      <small>Rule: answer_required=true</small>
+    `;
+    $("run").disabled = false;
+    return;
+  }
+
+  const result = {...evaluate(confidence, risk, verified), answerSource};
+  const block = await addBlock(operator, question, answer, result.verdict, result.reason, result.rule);
   showVerdict(result, block);
   $("run").disabled = false;
 
@@ -563,7 +642,7 @@ $("tamper").addEventListener("click", async () => {
     snapshot = JSON.parse(JSON.stringify(ledger));
   }
 
-  ledger[1].decision += " [ALTERED]";
+  ledger[1].question = (ledger[1].question || ledger[1].decision || "") + " [ALTERED]";
   tamperedIndex = 1;
   systemLocked = true;
   renderChain();
@@ -622,14 +701,17 @@ $("export").addEventListener("click", () => {
 
 (async function boot(){
   await initSigning();
+  await detectOpenAI();
 
   const genesis = {
     index:0,
     timestamp:new Date().toISOString(),
     operator:"",
-    decision:"",
+    question:"",
+    answer:"",
     verdict:"GENESIS",
     reason:"Ledger initialisation",
+    rule:"genesis",
     previousHash:null
   };
   ledger.push(await createSignedBlockAsync(genesis, keys.privateKey));
