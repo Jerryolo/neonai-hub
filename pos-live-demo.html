@@ -307,12 +307,12 @@ footer b{color:var(--text)}
   </div>
 </footer>
 
-<script>
+<script type="module">
+import { createSignedBlockAsync, verifyChainAsync } from "./src/chain.js";
+
 "use strict";
 
 const $ = id => document.getElementById(id);
-const enc = new TextEncoder();
-
 let keys = null;
 let signatureAlgorithm = "unavailable";
 let ledger = [];
@@ -331,58 +331,31 @@ function shortHash(value){
   return value.length > 34 ? value.slice(0,24) + "…" + value.slice(-8) : value;
 }
 
-async function sha256(value){
-  const digest = await crypto.subtle.digest("SHA-256", enc.encode(value));
-  return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2,"0")).join("");
+function getSignatureParams(){
+  return {name:"Ed25519"};
 }
 
 async function initSigning(){
   try{
-    keys = await crypto.subtle.generateKey({name:"Ed25519"}, false, ["sign","verify"]);
+    keys = await crypto.subtle.generateKey(getSignatureParams(), false, ["sign","verify"]);
     signatureAlgorithm = "Ed25519";
-  }catch{
-    try{
-      keys = await crypto.subtle.generateKey(
-        {name:"ECDSA", namedCurve:"P-256"},
-        false,
-        ["sign","verify"]
-      );
-      signatureAlgorithm = "ECDSA P-256 fallback";
-    }catch{
-      keys = null;
-      signatureAlgorithm = "signature unavailable";
-    }
+  }catch(error){
+    keys = null;
+    signatureAlgorithm = "signature unavailable";
+    $("cryptoNote").textContent =
+      "Live browser cryptography unavailable: this browser does not expose WebCrypto Ed25519.";
+    throw error;
   }
+
   $("cryptoNote").textContent =
     "Live browser cryptography: SHA-256 · " + signatureAlgorithm +
     ". Keys are session-local and are not exported.";
 }
 
-async function sign(value){
-  if(!keys) return "(signature unavailable)";
-  const params = signatureAlgorithm === "Ed25519"
-    ? {name:"Ed25519"}
-    : {name:"ECDSA", hash:"SHA-256"};
-  const sig = await crypto.subtle.sign(params, keys.privateKey, enc.encode(value));
-  return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2,"0")).join("");
-}
-
-function canonical(block){
-  return JSON.stringify({
-    index:block.index,
-    timestamp:block.timestamp,
-    operator:block.operator,
-    decision:block.decision,
-    verdict:block.verdict,
-    reason:block.reason,
-    previousHash:block.previousHash
-  });
-}
-
 async function addBlock(operator, decision, verdict, reason){
   const previousHash = ledger.length
     ? ledger[ledger.length - 1].hash
-    : "0".repeat(64);
+    : null;
 
   const block = {
     index:ledger.length,
@@ -394,11 +367,10 @@ async function addBlock(operator, decision, verdict, reason){
     previousHash
   };
 
-  block.hash = await sha256(canonical(block));
-  block.signature = await sign(block.hash);
-  ledger.push(block);
+  const signedBlock = await createSignedBlockAsync(block, keys.privateKey);
+  ledger.push(signedBlock);
   renderChain();
-  return block;
+  return signedBlock;
 }
 
 function evaluate(confidence, risk, verified){
@@ -450,18 +422,6 @@ function evaluate(confidence, risk, verified){
   };
 }
 
-async function verifyChain(){
-  for(let i=0;i<ledger.length;i++){
-    const block = ledger[i];
-    const expectedPrevious = i === 0 ? "0".repeat(64) : ledger[i-1].hash;
-    const recalculated = await sha256(canonical(block));
-
-    if(block.previousHash !== expectedPrevious || recalculated !== block.hash){
-      return {ok:false, index:i};
-    }
-  }
-  return {ok:true};
-}
 
 function renderChain(){
   const root = $("chain");
@@ -573,7 +533,13 @@ $("run").addEventListener("click", async () => {
 });
 
 $("verify").addEventListener("click", async () => {
-  const result = await verifyChain();
+  let result;
+  try{
+    await verifyChainAsync(ledger, keys.publicKey);
+    result = {ok:true};
+  }catch(error){
+    result = {ok:false, message:error.message, index:Number(error.message.match(/block (\d+)/)?.[1] ?? 0)};
+  }
   const state = $("integrity");
 
   if(result.ok){
@@ -581,7 +547,7 @@ $("verify").addEventListener("click", async () => {
     state.textContent = "CHAIN VERIFIED · " + ledger.length + " BLOCKS INTACT";
   }else{
     state.className = "integrity bad";
-    state.textContent = "INTEGRITY FAILURE · BLOCK #" + result.index;
+    state.textContent = "INTEGRITY FAILURE · BLOCK #" + result.index + " · " + result.message;
     systemLocked = true;
     $("failclosed").classList.add("show");
   }
@@ -602,10 +568,18 @@ $("tamper").addEventListener("click", async () => {
   systemLocked = true;
   renderChain();
 
-  const result = await verifyChain();
+  let result;
+  try{
+    await verifyChainAsync(ledger, keys.publicKey);
+    result = {ok:true};
+  }catch(error){
+    result = {ok:false, message:error.message, index:Number(error.message.match(/block (\d+)/)?.[1] ?? 1)};
+  }
   const state = $("integrity");
   state.className = "integrity bad";
-  state.textContent = "INTEGRITY FAILURE · BLOCK #" + (result.ok ? 1 : result.index);
+  state.textContent = result.ok
+    ? "INTEGRITY FAILURE · BLOCK #1"
+    : "INTEGRITY FAILURE · BLOCK #" + result.index + " · " + result.message;
 
   $("failclosed").classList.add("show");
   $("verdict").className = "verdict show rejectv";
@@ -656,11 +630,9 @@ $("export").addEventListener("click", () => {
     decision:"",
     verdict:"GENESIS",
     reason:"Ledger initialisation",
-    previousHash:"0".repeat(64)
+    previousHash:null
   };
-  genesis.hash = await sha256(canonical(genesis));
-  genesis.signature = await sign(genesis.hash);
-  ledger.push(genesis);
+  ledger.push(await createSignedBlockAsync(genesis, keys.privateKey));
   renderChain();
 })();
 </script>
