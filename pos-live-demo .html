@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proof-of-Silence™ — Live Demo</title>
+<style>
+:root{
+  --ink:#0b1020;
+  --panel:#111a30;
+  --panel-2:#0e1526;
+  --line:#233252;
+  --text:#e8ecf6;
+  --muted:#8fa0c2;
+  --cyan:#39e0e8;
+  --green:#5df0a1;
+  --amber:#ffb545;
+  --violet:#9d8cff;
+  --red:#ff5570;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  background:
+    radial-gradient(900px 500px at 85% -10%,rgba(57,224,232,.08),transparent 60%),
+    radial-gradient(800px 500px at 10% 110%,rgba(157,140,255,.07),transparent 60%),
+    var(--ink);
+  color:var(--text);
+  font-family:var(--sans);
+  min-height:100vh;
+}
+button,input,textarea,select{font:inherit}
+.wrap{max-width:1040px;margin:auto;padding:0 20px}
+header{
+  position:sticky;top:0;z-index:10;
+  border-bottom:1px solid var(--line);
+  background:rgba(11,16,32,.92);
+  backdrop-filter:blur(10px);
+}
+.hrow{
+  min-height:68px;
+  display:flex;align-items:center;justify-content:space-between;gap:16px
+}
+.brand{display:flex;align-items:baseline;gap:10px}
+.neon{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--cyan);font-weight:700}
+.product{font-weight:700}
+.tm{font-size:10px;color:var(--muted);vertical-align:super}
+.status{
+  display:flex;align-items:center;gap:8px;
+  font:12px var(--mono);color:var(--green);
+  border:1px solid rgba(93,240,161,.35);
+  border-radius:999px;padding:6px 11px
+}
+.status::before{content:"●";animation:pulse 1.5s infinite}
+@keyframes pulse{50%{opacity:.35}}
+
+.hero{padding:54px 0 30px}
+.eyebrow{
+  font:12px var(--mono);letter-spacing:.2em;text-transform:uppercase;
+  color:var(--cyan);margin-bottom:12px
+}
+h1{font-size:clamp(32px,6vw,58px);line-height:1.02;margin:0;max-width:15ch}
+.hero p{color:var(--muted);font-size:18px;max-width:66ch;margin:18px 0 0}
+.flow{
+  margin-top:22px;
+  font:12px var(--mono);
+  color:var(--cyan);
+  letter-spacing:.06em
+}
+section{border-top:1px solid var(--line);padding:34px 0}
+h2{font-size:22px;margin:0 0 6px}
+.sub{color:var(--muted);margin:0 0 22px}
+.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:22px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:22px
+}
+label{
+  display:block;
+  color:var(--muted);
+  font:11px var(--mono);
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  margin:16px 0 7px
+}
+label:first-child{margin-top:0}
+input,textarea,select{
+  width:100%;
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-radius:9px;
+  color:var(--text);
+  padding:12px;
+  outline:none
+}
+textarea{min-height:112px;resize:vertical}
+input:focus,textarea:focus,select:focus{border-color:var(--cyan)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:580px){.row{grid-template-columns:1fr}}
+.sliderline{display:flex;gap:12px;align-items:center}
+.sliderline input{padding:0;accent-color:var(--cyan)}
+.sliderline strong{font:14px var(--mono);color:var(--cyan);min-width:44px;text-align:right}
+.check{display:flex;align-items:center;gap:10px;margin-top:16px}
+.check input{width:17px;height:17px;accent-color:var(--cyan)}
+.check span{font-size:14px}
+.primary,.ghost,.danger{
+  border-radius:9px;padding:12px 15px;cursor:pointer;font-weight:700;
+  transition:transform .08s,border-color .2s,color .2s
+}
+.primary{width:100%;margin-top:20px;background:var(--cyan);color:var(--ink);border:0}
+.primary:hover,.ghost:hover,.danger:hover{transform:translateY(-1px)}
+.primary:disabled{opacity:.45;cursor:not-allowed}
+.ghost,.danger{background:transparent;border:1px solid var(--line);color:var(--text)}
+.ghost:hover{border-color:var(--cyan);color:var(--cyan)}
+.danger:hover{border-color:var(--red);color:var(--red)}
+.actions{display:flex;flex-wrap:wrap;gap:10px}
+
+.rules h3{margin:0 0 14px;font:12px var(--mono);letter-spacing:.12em;text-transform:uppercase}
+.rule{
+  display:flex;gap:10px;align-items:flex-start;
+  padding:12px 0;border-bottom:1px solid rgba(35,50,82,.7);
+  color:var(--muted);font-size:14px
+}
+.rule:last-child{border-bottom:0}
+.tag{font:11px var(--mono);border-radius:5px;padding:3px 7px;white-space:nowrap}
+.act{color:var(--green);background:rgba(93,240,161,.12)}
+.wait{color:var(--amber);background:rgba(255,181,69,.12)}
+.silence{color:var(--violet);background:rgba(157,140,255,.12)}
+.reject{color:var(--red);background:rgba(255,85,112,.12)}
+
+.verdict{
+  display:none;
+  margin-top:18px;
+  border:1px solid;
+  border-radius:12px;
+  padding:18px;
+  animation:show .25s ease-out
+}
+@keyframes show{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.verdict.show{display:block}
+.verdict .big{font:700 25px var(--mono);margin-bottom:7px}
+.verdict small{display:block;color:var(--muted);margin-top:8px;font-family:var(--mono)}
+.verdict.actv{border-color:rgba(93,240,161,.5);background:rgba(93,240,161,.06)}
+.verdict.actv .big{color:var(--green)}
+.verdict.waitv{border-color:rgba(255,181,69,.5);background:rgba(255,181,69,.06)}
+.verdict.waitv .big{color:var(--amber)}
+.verdict.silencev{border-color:rgba(157,140,255,.5);background:rgba(157,140,255,.06)}
+.verdict.silencev .big{color:var(--violet)}
+.verdict.rejectv{border-color:rgba(255,85,112,.55);background:rgba(255,85,112,.08)}
+.verdict.rejectv .big{color:var(--red)}
+
+.banner{
+  display:none;margin:0 0 18px;
+  border:1px solid rgba(255,85,112,.6);
+  background:rgba(255,85,112,.09);
+  border-radius:12px;padding:16px
+}
+.banner.show{display:block;animation:show .25s ease-out}
+.banner b{font:700 13px var(--mono);color:var(--red);letter-spacing:.08em}
+.banner p{margin:7px 0 0;color:var(--text)}
+
+.chain{display:flex;flex-direction:column}
+.block{
+  position:relative;
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:16px 18px
+}
+.block.bad{border-color:var(--red);box-shadow:0 0 0 1px rgba(255,85,112,.25)}
+.block .top{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:10px}
+.idx{
+  font:700 11px var(--mono);
+  background:var(--cyan);color:var(--ink);
+  border-radius:4px;padding:2px 7px
+}
+.ts{font:11px var(--mono);color:var(--muted)}
+.operator{font-size:13px}
+.operator b{color:var(--cyan)}
+.decision{font-size:14px;margin-bottom:10px}
+.hashgrid{
+  display:grid;grid-template-columns:78px 1fr;gap:4px 10px;
+  font:11px var(--mono)
+}
+.hashgrid .k{color:var(--muted)}
+.hashgrid .v{color:var(--cyan);word-break:break-all}
+.hashgrid .prev{color:var(--violet)}
+.hashgrid .badtext{color:var(--red);text-decoration:line-through}
+.link{height:28px;display:flex;justify-content:center;align-items:center;color:var(--cyan)}
+.link.bad{color:var(--red)}
+.integrity{
+  display:none;align-items:center;
+  font:12px var(--mono);
+  border:1px solid;border-radius:8px;padding:9px 12px
+}
+.integrity.ok{display:flex;color:var(--green);border-color:rgba(93,240,161,.4)}
+.integrity.bad{display:flex;color:var(--red);border-color:rgba(255,85,112,.5)}
+footer{
+  border-top:1px solid var(--line);
+  padding:28px 0 42px;
+  color:var(--muted);font-size:13px
+}
+footer b{color:var(--text)}
+.note{font:11px var(--mono);margin-top:10px}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap hrow">
+    <div class="brand">
+      <span class="neon">NEON AI</span>
+      <span class="product">Proof-of-Silence<span class="tm">™</span></span>
+    </div>
+    <div class="status">LIVE DEMO</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="hero">
+    <div class="eyebrow">Cryptographic accountability layer for AI decisions</div>
+    <h1>Every decision signed. Every silence recorded.</h1>
+    <p>Submit a proposed AI action. Proof-of-Silence™ evaluates the available evidence and risk, returns a verdict, signs the record, and adds it to a SHA-256 hash chain. Then try to alter the history.</p>
+    <div class="flow">QUESTION → EVIDENCE → RISK → VERDICT → SIGNATURE → AUDIT TRAIL</div>
+  </div>
+
+  <section>
+    <h2>01 · Decision Gate</h2>
+    <p class="sub">A named human operator is required. No anonymous decision enters the ledger.</p>
+
+    <div class="grid">
+      <div class="card">
+        <label for="operator">Human operator *</label>
+        <input id="operator" maxlength="80" placeholder="e.g. J. Kowalski — Compliance Lead">
+
+        <label for="decision">Proposed AI decision / action *</label>
+        <textarea id="decision" maxlength="400" placeholder="e.g. Approve a €480 refund based on the verified customer case file"></textarea>
+
+        <div class="row">
+          <div>
+            <label for="risk">Risk class</label>
+            <select id="risk">
+              <option value="low">Low — informational, reversible</option>
+              <option value="medium">Medium — operational impact</option>
+              <option value="high">High — financial, legal or personal data</option>
+              <option value="critical">Critical — safety or irreversible</option>
+            </select>
+          </div>
+          <div>
+            <label for="confidence">Evidence confidence</label>
+            <div class="sliderline">
+              <input id="confidence" type="range" min="0" max="100" value="86">
+              <strong id="confidenceValue">86%</strong>
+            </div>
+          </div>
+        </div>
+
+        <label class="check">
+          <input id="verified" type="checkbox" checked>
+          <span>Input evidence is complete and verified</span>
+        </label>
+
+        <button class="primary" id="run">Evaluate and sign decision</button>
+        <div class="verdict" id="verdict"></div>
+      </div>
+
+      <div class="card rules">
+        <h3>Transparent verdict logic</h3>
+        <div class="rule"><span class="tag reject">REJECT</span><span>Critical action below 90% confidence, or high-risk action based on unverified evidence.</span></div>
+        <div class="rule"><span class="tag silence">SILENCE</span><span>Confidence below 50%, or incomplete evidence. The refusal is recorded.</span></div>
+        <div class="rule"><span class="tag wait">WAIT</span><span>Elevated risk or insufficient confidence for execution. Human review is required.</span></div>
+        <div class="rule"><span class="tag act">ACT NOW</span><span>Verified evidence, acceptable risk, and confidence of at least 80%.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>02 · Signed Proof Chain</h2>
+    <p class="sub">Each block contains the hash of the previous block. Any change becomes visible during verification.</p>
+
+    <div class="actions" style="margin-bottom:18px">
+      <button class="ghost" id="verify">Verify chain</button>
+      <button class="danger" id="tamper">Try to tamper</button>
+      <button class="ghost" id="restore">Restore ledger</button>
+      <button class="ghost" id="export">Export JSON</button>
+      <span class="integrity" id="integrity"></span>
+    </div>
+
+    <div class="banner" id="failclosed">
+      <b>REJECT · FAIL-CLOSED · CHAIN INTEGRITY LOST</b>
+      <p>Manipulation detected. Execution is blocked, the breach is preserved as evidence, and the case must be escalated to the named human operator.</p>
+    </div>
+
+    <div class="chain" id="chain"></div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <b>Regulatory positioning.</b> Proof-of-Silence™ supports key EU AI Act requirements including record-keeping, traceability and human oversight. It is an accountability layer, not a certification, and does not by itself make a system compliant.
+    <div class="note" id="cryptoNote">Initialising cryptography…</div>
+  </div>
+</footer>
+
+<script>
+"use strict";
+
+const $ = id => document.getElementById(id);
+const enc = new TextEncoder();
+
+let keys = null;
+let signatureAlgorithm = "unavailable";
+let ledger = [];
+let snapshot = null;
+let tamperedIndex = null;
+let systemLocked = false;
+
+function escapeHTML(value){
+  return String(value).replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  })[c]);
+}
+
+function shortHash(value){
+  if(!value) return "—";
+  return value.length > 34 ? value.slice(0,24) + "…" + value.slice(-8) : value;
+}
+
+async function sha256(value){
+  const digest = await crypto.subtle.digest("SHA-256", enc.encode(value));
+  return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2,"0")).join("");
+}
+
+async function initSigning(){
+  try{
+    keys = await crypto.subtle.generateKey({name:"Ed25519"}, false, ["sign","verify"]);
+    signatureAlgorithm = "Ed25519";
+  }catch{
+    try{
+      keys = await crypto.subtle.generateKey(
+        {name:"ECDSA", namedCurve:"P-256"},
+        false,
+        ["sign","verify"]
+      );
+      signatureAlgorithm = "ECDSA P-256 fallback";
+    }catch{
+      keys = null;
+      signatureAlgorithm = "signature unavailable";
+    }
+  }
+  $("cryptoNote").textContent =
+    "Live browser cryptography: SHA-256 · " + signatureAlgorithm +
+    ". Keys are session-local and are not exported.";
+}
+
+async function sign(value){
+  if(!keys) return "(signature unavailable)";
+  const params = signatureAlgorithm === "Ed25519"
+    ? {name:"Ed25519"}
+    : {name:"ECDSA", hash:"SHA-256"};
+  const sig = await crypto.subtle.sign(params, keys.privateKey, enc.encode(value));
+  return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2,"0")).join("");
+}
+
+function canonical(block){
+  return JSON.stringify({
+    index:block.index,
+    timestamp:block.timestamp,
+    operator:block.operator,
+    decision:block.decision,
+    verdict:block.verdict,
+    reason:block.reason,
+    previousHash:block.previousHash
+  });
+}
+
+async function addBlock(operator, decision, verdict, reason){
+  const previousHash = ledger.length
+    ? ledger[ledger.length - 1].hash
+    : "0".repeat(64);
+
+  const block = {
+    index:ledger.length,
+    timestamp:new Date().toISOString(),
+    operator,
+    decision,
+    verdict,
+    reason,
+    previousHash
+  };
+
+  block.hash = await sha256(canonical(block));
+  block.signature = await sign(block.hash);
+  ledger.push(block);
+  renderChain();
+  return block;
+}
+
+function evaluate(confidence, risk, verified){
+  if(risk === "critical" && confidence < 90){
+    return {
+      verdict:"REJECT",
+      css:"rejectv",
+      reason:"Critical-risk action requires at least 90% evidence confidence.",
+      rule:"risk=critical AND confidence<90"
+    };
+  }
+  if(risk === "high" && !verified){
+    return {
+      verdict:"REJECT",
+      css:"rejectv",
+      reason:"High-risk action cannot proceed on unverified evidence.",
+      rule:"risk=high AND evidence≠verified"
+    };
+  }
+  if(confidence < 50){
+    return {
+      verdict:"SILENCE",
+      css:"silencev",
+      reason:"Evidence confidence is below the 50% floor.",
+      rule:"confidence<50"
+    };
+  }
+  if(!verified){
+    return {
+      verdict:"SILENCE",
+      css:"silencev",
+      reason:"Input evidence is incomplete or unverified.",
+      rule:"evidence≠verified"
+    };
+  }
+  if(confidence < 80 || risk === "high" || risk === "critical"){
+    return {
+      verdict:"WAIT",
+      css:"waitv",
+      reason:"Conditions for autonomous execution are not met. Human review is required.",
+      rule:"confidence<80 OR elevated risk"
+    };
+  }
+  return {
+    verdict:"ACT NOW",
+    css:"actv",
+    reason:"Evidence is verified, risk is acceptable, and confidence meets the execution threshold.",
+    rule:"confidence≥80 AND acceptable risk AND verified evidence"
+  };
+}
+
+async function verifyChain(){
+  for(let i=0;i<ledger.length;i++){
+    const block = ledger[i];
+    const expectedPrevious = i === 0 ? "0".repeat(64) : ledger[i-1].hash;
+    const recalculated = await sha256(canonical(block));
+
+    if(block.previousHash !== expectedPrevious || recalculated !== block.hash){
+      return {ok:false, index:i};
+    }
+  }
+  return {ok:true};
+}
+
+function renderChain(){
+  const root = $("chain");
+  root.innerHTML = "";
+
+  ledger.forEach((block, index) => {
+    if(index > 0){
+      const link = document.createElement("div");
+      link.className = "link" + (tamperedIndex !== null && index > tamperedIndex ? " bad" : "");
+      link.textContent = "↓";
+      root.appendChild(link);
+    }
+
+    const node = document.createElement("div");
+    const isBad = tamperedIndex !== null && index >= tamperedIndex;
+    node.className = "block" + (isBad ? " bad" : "");
+
+    const badge = block.verdict === "GENESIS"
+      ? ""
+      : `<span class="tag ${
+          block.verdict === "ACT NOW" ? "act" :
+          block.verdict.toLowerCase()
+        }">${block.verdict}</span>`;
+
+    node.innerHTML = `
+      <div class="top">
+        <span class="idx">#${String(block.index).padStart(3,"0")}</span>
+        <span class="ts">${block.timestamp}</span>
+        ${badge}
+        ${block.operator ? `<span class="operator">Operator: <b>${escapeHTML(block.operator)}</b></span>` : ""}
+      </div>
+      <div class="decision">${
+        block.verdict === "GENESIS"
+          ? "Genesis block — ledger initialised"
+          : escapeHTML(block.decision)
+      }</div>
+      <div class="hashgrid">
+        <span class="k">PREV</span>
+        <span class="v prev">${shortHash(block.previousHash)}</span>
+        <span class="k">SHA-256</span>
+        <span class="v ${isBad ? "badtext" : ""}">${shortHash(block.hash)}</span>
+        <span class="k">SIGNATURE</span>
+        <span class="v">${shortHash(block.signature)}</span>
+      </div>
+    `;
+    root.appendChild(node);
+  });
+}
+
+function showVerdict(result, block){
+  const box = $("verdict");
+  box.className = "verdict show " + result.css;
+  box.innerHTML = `
+    <div class="big">${result.verdict}</div>
+    <div>${escapeHTML(result.reason)}</div>
+    <small>Rule: ${escapeHTML(result.rule)}</small>
+    <small>SHA-256: ${shortHash(block.hash)}</small>
+  `;
+}
+
+$("confidence").addEventListener("input", e => {
+  $("confidenceValue").textContent = e.target.value + "%";
+});
+
+$("run").addEventListener("click", async () => {
+  if(systemLocked){
+    const fake = {
+      verdict:"REJECT",
+      css:"rejectv",
+      reason:"The ledger is locked because chain integrity has been lost.",
+      rule:"fail-closed=true"
+    };
+    $("verdict").className = "verdict show rejectv";
+    $("verdict").innerHTML = `
+      <div class="big">REJECT</div>
+      <div>${fake.reason}</div>
+      <small>Rule: ${fake.rule}</small>
+    `;
+    return;
+  }
+
+  const operator = $("operator").value.trim();
+  const decision = $("decision").value.trim();
+
+  if(!operator || !decision){
+    $("verdict").className = "verdict show rejectv";
+    $("verdict").innerHTML = `
+      <div class="big">REJECT</div>
+      <div>A named operator and a decision description are required.</div>
+      <small>Rule: anonymous decisions are not accepted</small>
+    `;
+    return;
+  }
+
+  const confidence = Number($("confidence").value);
+  const risk = $("risk").value;
+  const verified = $("verified").checked;
+  const result = evaluate(confidence, risk, verified);
+
+  $("run").disabled = true;
+  const block = await addBlock(operator, decision, result.verdict, result.reason);
+  showVerdict(result, block);
+  $("run").disabled = false;
+
+  document.querySelector("section:nth-of-type(2)").scrollIntoView({
+    behavior:"smooth",
+    block:"start"
+  });
+});
+
+$("verify").addEventListener("click", async () => {
+  const result = await verifyChain();
+  const state = $("integrity");
+
+  if(result.ok){
+    state.className = "integrity ok";
+    state.textContent = "CHAIN VERIFIED · " + ledger.length + " BLOCKS INTACT";
+  }else{
+    state.className = "integrity bad";
+    state.textContent = "INTEGRITY FAILURE · BLOCK #" + result.index;
+    systemLocked = true;
+    $("failclosed").classList.add("show");
+  }
+});
+
+$("tamper").addEventListener("click", async () => {
+  if(ledger.length < 2){
+    alert("Create at least one decision block first.");
+    return;
+  }
+
+  if(!snapshot){
+    snapshot = JSON.parse(JSON.stringify(ledger));
+  }
+
+  ledger[1].decision += " [ALTERED]";
+  tamperedIndex = 1;
+  systemLocked = true;
+  renderChain();
+
+  const result = await verifyChain();
+  const state = $("integrity");
+  state.className = "integrity bad";
+  state.textContent = "INTEGRITY FAILURE · BLOCK #" + (result.ok ? 1 : result.index);
+
+  $("failclosed").classList.add("show");
+  $("verdict").className = "verdict show rejectv";
+  $("verdict").innerHTML = `
+    <div class="big">REJECT</div>
+    <div>Tampering detected. The system is now fail-closed and will not accept further decisions.</div>
+    <small>Rule: chain_integrity=false → REJECT + LOCK</small>
+  `;
+});
+
+$("restore").addEventListener("click", () => {
+  if(snapshot){
+    ledger = JSON.parse(JSON.stringify(snapshot));
+  }
+  snapshot = null;
+  tamperedIndex = null;
+  systemLocked = false;
+  $("failclosed").classList.remove("show");
+  $("integrity").className = "integrity";
+  $("integrity").textContent = "";
+  renderChain();
+});
+
+$("export").addEventListener("click", () => {
+  const payload = {
+    product:"Proof-of-Silence™",
+    vendor:"NEON AI",
+    exportedAt:new Date().toISOString(),
+    signatureAlgorithm,
+    systemLocked,
+    ledger
+  };
+  const blob = new Blob([JSON.stringify(payload,null,2)], {type:"application/json"});
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "proof-of-silence-ledger.json";
+  link.click();
+  URL.revokeObjectURL(link.href);
+});
+
+(async function boot(){
+  await initSigning();
+
+  const genesis = {
+    index:0,
+    timestamp:new Date().toISOString(),
+    operator:"",
+    decision:"",
+    verdict:"GENESIS",
+    reason:"Ledger initialisation",
+    previousHash:"0".repeat(64)
+  };
+  genesis.hash = await sha256(canonical(genesis));
+  genesis.signature = await sign(genesis.hash);
+  ledger.push(genesis);
+  renderChain();
+})();
+</script>
+</body>
+</html>
