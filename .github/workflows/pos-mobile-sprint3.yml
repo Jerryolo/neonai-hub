@@ -1,0 +1,39 @@
+name: Proof-of-Silence Mobile Sprint 3
+on:
+  workflow_dispatch:
+  push:
+    branches: [pos-mobile-sprint3]
+    paths:
+      - 'mobile/sprint3-src.tgz.b64'
+      - '.github/workflows/pos-mobile-sprint3.yml'
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Restore Sprint 3 source
+        run: |
+          mkdir -p mobile/ProofOfSilenceMobile
+          base64 -d mobile/sprint3-src.tgz.b64 | tar -xz -C mobile/ProofOfSilenceMobile
+      - name: Core + conformance + red team
+        working-directory: mobile/ProofOfSilenceMobile
+        run: ./run-sprint2-tests.sh
+      - name: Build debug APK
+        working-directory: mobile/ProofOfSilenceMobile
+        run: gradle --no-daemon :app:assembleDebug
+      - name: Hash APK
+        working-directory: mobile/ProofOfSilenceMobile
+        run: sha256sum app/build/outputs/apk/debug/app-debug.apk | tee app-debug.apk.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ProofOfSilence-Mobile-Standard-Sprint3-v0.3-debug
+          path: |
+            mobile/ProofOfSilenceMobile/app/build/outputs/apk/debug/app-debug.apk
+            mobile/ProofOfSilenceMobile/app-debug.apk.sha256
