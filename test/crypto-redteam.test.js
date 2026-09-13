@@ -114,7 +114,7 @@ test('malformed and noncanonical Base64 rejected, including equivalent pad bits'
 
 test('Node and WebCrypto interoperate in both directions with imported RFC keys', async () => {
   const privateKey = await webcrypto.subtle.importKey('pkcs8', rfcPrivateKey.export({ format: 'der', type: 'pkcs8' }), 'Ed25519', false, ['sign']);
-  const publicKey = await webcrypto.subtle.importKey('raw', Buffer.from(rfcPublic, 'hex'), 'Ed25519', false, ['verify']);
+  const publicKey = await webcrypto.subtle.importKey('raw', Buffer.from(rfcPublic, 'hex'), 'Ed25519', true, ['verify']);
   const input = genesisInput();
   const native = createSignedBlock(input, rfcPrivateKey);
   const browser = await createSignedBlockAsync(input, privateKey);
@@ -122,7 +122,7 @@ test('Node and WebCrypto interoperate in both directions with imported RFC keys'
   assert.equal(hashBlock(input), await hashBlockAsync(input));
   assert.equal(verifyChain([browser], rfcPublicKey), true);
   assert.equal(await verifyChainAsync([native], publicKey), true);
-  assert.throws(() => verifyChain([browser], publicKey), /Async APIs/);
+  assert.equal(verifyChain([browser], publicKey), true);
   assert.throws(() => signBlock(input, privateKey), /Async APIs/);
   assert.equal(await signBlockAsync(input, rfcPrivateKey), native.signature);
   assert.equal((await verifyBlockSignatureAsync(native, privateKey)).ok, false);
@@ -157,7 +157,7 @@ test('async signing snapshots caller payload before yielding', async () => {
 test('identity and low-order key forgeries rejected by native and WebCrypto', async () => {
   for (const raw of ['01' + '00'.repeat(31), '00'.repeat(32), 'ec' + 'ff'.repeat(30) + '7f']) {
     const key = createPublicKey({ key: Buffer.from('302a300506032b6570032100' + raw, 'hex'), format: 'der', type: 'spki' });
-    const browserKey = await webcrypto.subtle.importKey('raw', Buffer.from(raw, 'hex'), 'Ed25519', false, ['verify']);
+    const browserKey = await webcrypto.subtle.importKey('raw', Buffer.from(raw, 'hex'), 'Ed25519', true, ['verify']);
     for (const r of ['01' + '00'.repeat(31), '00'.repeat(32)]) {
       const forged = { ...genesisInput(), signature: Buffer.from(r + '00'.repeat(32), 'hex').toString('base64') };
       forged.hash = hashBlock(forged);
@@ -176,7 +176,7 @@ test('Ed25519 rejects noncanonical S scalar instead of reducing modulo group ord
   for (let i = 32; i < 64; i++) { bytes[i] = Number(scalar & 255n); scalar >>= 8n; }
   const forged = { ...valid, signature: bytes.toString('base64') };
   assert.equal(verifyBlockSignature(forged, trusted.publicKey).ok, false);
-  const publicKey = await webcrypto.subtle.importKey('spki', trusted.publicKey.export({ type: 'spki', format: 'der' }), 'Ed25519', false, ['verify']);
+  const publicKey = await webcrypto.subtle.importKey('spki', trusted.publicKey.export({ type: 'spki', format: 'der' }), 'Ed25519', true, ['verify']);
   assert.equal((await verifyBlockSignatureAsync(forged, publicKey)).ok, false);
 });
 
@@ -196,4 +196,33 @@ test('oversized, excessive-depth and oversized-chain inputs reject boundedly', (
   let deep = null; for (let i = 0; i < 100; i++) deep = [deep];
   assert.throws(() => canonicalize(deep), /complexity limit/);
   assert.throws(() => verifyChain(Array(1001).fill(chainWith()[0]), trusted.publicKey), /block limit/);
+});
+
+test('all small-order/noncanonical point encodings and both sign bits reject explicitly', async () => {
+  const ys = ['00'.repeat(32), '01'+'00'.repeat(31),
+    '26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05',
+    'c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a',
+    'ec'+'ff'.repeat(30)+'7f', 'ed'+'ff'.repeat(30)+'7f', 'ee'+'ff'.repeat(30)+'7f'];
+  const valid = chainWith()[0];
+  // R = standard generator, S = 1: high-order R must not mask an identity public key.
+  const forged = {...valid, signature: Buffer.from('58'+'66'.repeat(31)+'01'+'00'.repeat(31),'hex').toString('base64')};
+  for (const y of ys) for (const signBit of [0, 128]) {
+    const raw = Buffer.from(y,'hex'); raw[31] |= signBit;
+    const key = createPublicKey({key:Buffer.concat([Buffer.from('302a300506032b6570032100','hex'),raw]),format:'der',type:'spki'});
+    const native = verifyBlockSignature(forged,key);
+    assert.equal(native.ok,false); assert.match(native.reason,/point/);
+    const web = await webcrypto.subtle.importKey('raw',raw,'Ed25519',true,['verify']);
+    const browser = await verifyBlockSignatureAsync(forged,web);
+    assert.equal(browser.ok,false); assert.match(browser.reason,/point/);
+    const signature = Buffer.from(valid.signature,'base64'); raw.copy(signature,0);
+    const badR = verifyBlockSignature({...valid,signature:signature.toString('base64')},trusted.publicKey);
+    assert.equal(badR.ok,false); assert.match(badR.reason,/point/);
+  }
+});
+
+test('non-exportable public CryptoKey fails closed rather than skipping key checks', async () => {
+  const key = await webcrypto.subtle.importKey('raw',Buffer.from(rfcPublic,'hex'),'Ed25519',false,['verify']);
+  const signed = createSignedBlock(genesisInput(),rfcPrivateKey);
+  const result = await verifyBlockSignatureAsync(signed,key);
+  assert.equal(result.ok,false); assert.match(result.reason,/exportable public/);
 });

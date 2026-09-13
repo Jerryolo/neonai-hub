@@ -4,6 +4,42 @@ const encoder = new TextEncoder();
 const HASH = /^[0-9a-f]{64}$/;
 const ED25519 = { name: 'Ed25519' };
 
+// Compressed small-order y encodings from libsodium ge25519_has_small_order
+// (1.0.18-RELEASE). These are public encoding checks, not curve arithmetic.
+// Both sign bits are rejected; y >= p is noncanonical. Native crypto still
+// performs the signature equation. See THIRD-PARTY-NOTICES.md.
+const SMALL_ORDER_Y = new Set([
+  '00'.repeat(32), '01' + '00'.repeat(31),
+  '26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05',
+  'c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a',
+  'ec' + 'ff'.repeat(30) + '7f',
+]);
+const FIELD_P = (1n << 255n) - 19n;
+const GROUP_L = (1n << 252n) + 27742317777372353535851937790883648493n;
+const checkedPublicKeys = new WeakSet();
+function littleInteger(bytes) {
+  let value = 0n;
+  for (let i = bytes.length - 1; i >= 0; i--) value = (value << 8n) | BigInt(bytes[i]);
+  return value;
+}
+function assertPointEncoding(bytes) {
+  if (bytes.length !== 32) throw new TypeError('Invalid Ed25519 point length');
+  const y = Uint8Array.from(bytes); y[31] &= 0x7f;
+  if (littleInteger(y) >= FIELD_P || SMALL_ORDER_Y.has(hex(y))) {
+    throw new TypeError('Noncanonical or small-order Ed25519 point');
+  }
+}
+async function checkedWebPublicKey(key) {
+  webKey(key, 'public');
+  if (!key.extractable) throw new TypeError('Verification requires an exportable public CryptoKey for encoding validation; import public material with extractable=true');
+  if (!checkedPublicKeys.has(key)) {
+    assertPointEncoding(new Uint8Array(await subtleCrypto().exportKey('raw', key)));
+    checkedPublicKeys.add(key);
+  }
+  return key;
+}
+
+
 function nodeCrypto() {
   const crypto = globalThis.process?.getBuiltinModule?.('node:crypto');
   if (!crypto) throw new Error('Synchronous crypto requires Node >=22.12; use the Async APIs in browsers');
@@ -120,6 +156,8 @@ function signatureBytes(signature) {
     ? new Uint8Array(Buffer.from(signature, 'base64'))
     : Uint8Array.from(atob(signature), c => c.charCodeAt(0));
   if (bytes.length !== 64 || base64(bytes) !== signature) throw new TypeError('signature is not canonical 64-byte base64');
+  assertPointEncoding(bytes.subarray(0, 32));
+  if (littleInteger(bytes.subarray(32)) >= GROUP_L) throw new TypeError('Noncanonical Ed25519 S scalar');
   return bytes;
 }
 
@@ -150,6 +188,10 @@ function nativeKey(key, type) {
     normalized = type === 'public' ? crypto.createPublicKey(key) : crypto.createPrivateKey(key);
   } else throw new TypeError('A trusted Ed25519 key object or PEM is required');
   if (normalized.type !== type || normalized.asymmetricKeyType !== 'ed25519') throw new TypeError(`An Ed25519 ${type} key is required`);
+  if (type === 'public' && !checkedPublicKeys.has(normalized)) {
+    assertPointEncoding(Buffer.from(normalized.export({ format: 'jwk' }).x, 'base64url'));
+    checkedPublicKeys.add(normalized);
+  }
   return normalized;
 }
 
@@ -184,7 +226,8 @@ export async function verifyBlockSignatureAsync(block, publicKey) {
   try {
     const copy = snapshotBlock(block);
     if (!isCryptoKey(publicKey)) return verifyBlockSignature(copy, publicKey);
-    const ok = await subtleCrypto().verify(ED25519, webKey(publicKey, 'public'), signatureBytes(copy.signature), encoder.encode(payloadOfSnapshot(copy)));
+    const key = await checkedWebPublicKey(publicKey);
+    const ok = await subtleCrypto().verify(ED25519, key, signatureBytes(copy.signature), encoder.encode(payloadOfSnapshot(copy)));
     return ok ? { ok: true } : { ok: false, reason: 'Ed25519 signature mismatch' };
   } catch (error) {
     return { ok: false, reason: `invalid Ed25519 signature: ${error.message}` };

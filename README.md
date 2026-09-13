@@ -83,7 +83,9 @@ A synchronous trusted-key resolver `(immutableBlock, index) => key` is also
 supported. There is no fallback to `block.publicKey`. The caller must implement
 signer allowlisting and rotation policy in that resolver. Unknown keys must fail.
 PEM and native Ed25519 KeyObjects work in Node. Browser callers use Ed25519
-CryptoKeys and Async methods. Non-extractable CryptoKeys must use Async methods;
+CryptoKeys and Async methods. Public verification CryptoKeys must be imported with
+`extractable: true` so their public point encoding can be validated; private
+signing keys remain non-extractable. Non-extractable CryptoKeys must use Async methods;
 the synchronous API does not convert them into exportable native key objects.
 
 Without checkpoint options, success means **the nonempty supplied chain has valid
@@ -100,7 +102,10 @@ Only finite-number JSON data is accepted: no sparse/extended arrays, class insta
 Date/Map/Set, accessors, hidden/symbol properties, cycles, undefined or lone Unicode
 surrogates. `hash` and `signature` at the top level are excluded from signed/hash
 payloads; the chain verifier checks the stored hash separately. Strict standard
-Base64 encodes each 64-byte signature. Payload limit: 256 KiB UTF-8, depth 64;
+Base64 encodes each 64-byte signature. Explicit checks reject small-order and
+noncanonical public-key/R encodings and noncanonical S scalars before the native
+verifier. These checks address a reproduced Node 22 backend discrepancy; they do
+not replace the native signature equation or establish full subgroup validation. Payload limit: 256 KiB UTF-8, depth 64;
 chain limit: 1,000 blocks and 16 MiB canonical block bytes. Async verification checks
 an immutable snapshot taken at invocation, not later mutations of caller state.
 Inputs must be data, not hostile executable JavaScript Proxy objects. Parsing raw

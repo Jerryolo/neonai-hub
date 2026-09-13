@@ -25,9 +25,16 @@ this constitutes an audit of the founder's entire Proof-of-Silence ecosystem.
 | UI implies actual evidence authentication or action execution | Explicit illustrative/no-execution mode; evidence is operator declaration only | UI copy and signed mode |
 | PR conflicted with browser/proxy additions on main | Merge main into PR lineage and preserve sync + async functionality | two-parent merge commit and complete regression suite |
 
+Additional CI finding: initial hardening commit `4aea826` passed Node 24 and
+Chromium but failed the Node 22 low-order-key forgery test. The follow-up adds
+explicit checks for all compressed small-order y encodings (both sign bits),
+noncanonical y and S encodings, and validates public-key bytes before native
+verification. Browser public CryptoKeys must be exportable for these public-data
+checks; private keys remain non-exportable. No failing test was removed or skipped.
+
 ## Executed verification
 
-Local Node v24.19.0: **47 tests passed**, comprising 3 original PR tests, 29 crypto
+Local Node v24.19.0: **49 tests passed**, comprising 3 original PR tests, 31 crypto
 red-team tests, 7 demo/policy tests, 7 proxy HTTP suites and 1 end-to-end export CLI
 suite. Tests include RFC 8032 known-answer checks, independent hash/link rejection,
 key/algorithm substitution, malformed canonical inputs, identity/low-order forgery,
@@ -37,7 +44,8 @@ success/failure. Cryptographic backend coverage locally is Node/OpenSSL and Node
 WebCrypto, not all browser implementations.
 
 Local Chromium execution was initially blocked by absence of the browser binary;
-standard Playwright installation timed out. `scripts/browser-smoke.mjs` is provided
+standard Playwright installation timed out. The first CI run subsequently passed
+the actual Chromium UI smoke test on `4aea826`; the follow-up must pass again. `scripts/browser-smoke.mjs` is provided
 and the required CI browser job installs Chromium and exercises the actual UI,
 native WebCrypto, export, XSS escaping, tamper/restore, missing-crypto boot, and the
 same-origin proxy request with a mock upstream. **Do not interpret script creation

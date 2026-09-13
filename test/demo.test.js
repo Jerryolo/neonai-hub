@@ -28,7 +28,7 @@ test('overlapping appends serialize, bind policy evidence and export public mate
   assert.equal(exported.sessionCheckpoint.expectedLength,13);
   assert.equal(session.keys.privateKey.extractable,false);
   assert.ok(!JSON.stringify(exported).includes('PRIVATE KEY'));
-  const key = await crypto.subtle.importKey('spki',Buffer.from(exported.publicKeySpkiBase64,'base64'),{name:'Ed25519'},false,['verify']);
+  const key = await crypto.subtle.importKey('spki',Buffer.from(exported.publicKeySpkiBase64,'base64'),{name:'Ed25519'},true,['verify']);
   await verifyChainAsync(exported.ledger,key,exported.sessionCheckpoint);
 });
 test('truncation blocks append and restore without a snapshot cannot unlock', async () => {

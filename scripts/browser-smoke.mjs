@@ -18,6 +18,14 @@ try {
   await page.goto(url);
   await page.locator('#run:enabled').waitFor();
   assert.equal(await page.locator('.block').count(),1);
+  const weakKeyResult = await page.evaluate(async () => {
+    const {verifyBlockSignatureAsync} = await import('/src/chain.js');
+    const raw = new Uint8Array(32); raw[0] = 1;
+    const key = await crypto.subtle.importKey('raw', raw, 'Ed25519', true, ['verify']);
+    const signature = new Uint8Array(64); signature.fill(0x66, 0, 32); signature[0] = 0x58; signature[32] = 1;
+    return verifyBlockSignatureAsync({previousHash:null, signature:btoa(String.fromCharCode(...signature))}, key);
+  });
+  assert.equal(weakKeyResult.ok, false); assert.match(weakKeyResult.reason, /point/);
   await page.locator('#operator').fill('<img src=x onerror="window.pwned=1">');
   await page.locator('#question').fill('Demo question');
   await page.locator('#answer').fill('Manual response');
