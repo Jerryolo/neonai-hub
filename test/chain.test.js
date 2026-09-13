@@ -18,6 +18,10 @@ function buildChain() {
   return { chain: [genesis, second], publicKey };
 }
 
+function cloneChain(chain) {
+  return chain.map((block) => ({ ...block, data: { ...block.data } }));
+}
+
 describe('verifyChain', () => {
   it('verifies hashes, continuity, and Ed25519 signatures for every block', () => {
     const { chain, publicKey } = buildChain();
@@ -25,15 +29,29 @@ describe('verifyChain', () => {
     assert.equal(verifyChain(chain, publicKey), true);
   });
 
-  it('fails signature verification when a block is tampered with', () => {
+  it('fails signature verification when any block is tampered with', () => {
     const { chain, publicKey } = buildChain();
-    const tampered = chain.map((block) => ({ ...block, data: { ...block.data } }));
-    tampered[1].data.message = 'tampered';
-    tampered[1].hash = hashBlock(tampered[1]);
+
+    for (const index of chain.keys()) {
+      const tampered = cloneChain(chain);
+      tampered[index].data.message = 'tampered';
+      tampered[index].hash = hashBlock(tampered[index]);
+
+      assert.throws(
+        () => verifyChain(tampered, publicKey),
+        new RegExp(`Chain verification failed at block ${index}: Ed25519 signature mismatch`),
+      );
+    }
+  });
+
+  it('reports the specific block when its signature is malformed', () => {
+    const { chain, publicKey } = buildChain();
+    const tampered = cloneChain(chain);
+    tampered[1].signature = 'not base64';
 
     assert.throws(
       () => verifyChain(tampered, publicKey),
-      /Chain verification failed at block 1: Ed25519 signature mismatch/,
+      /Chain verification failed at block 1: invalid Ed25519 signature: signature is not valid base64/,
     );
   });
 });

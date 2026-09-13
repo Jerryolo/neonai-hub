@@ -225,20 +225,20 @@ footer b{color:var(--text)}
   <div class="hero">
     <div class="eyebrow">Cryptographic accountability layer for AI decisions</div>
     <h1>Every decision signed. Every silence recorded.</h1>
-    <p>Submit a question. When configured, GPT-5.6 answers through the OpenAI API; otherwise the demo switches to a clearly labeled offline mode for manual answers. Proof-of-Silence™ evaluates the answer evidence and risk, signs the record, and adds it to a SHA-256 hash chain.</p>
+    <p>Submit a question. When configured, AI answers through the OpenAI API; otherwise the demo switches to a clearly labeled offline mode for manual answers. The illustrative policy evaluates your declared confidence, evidence status and risk, signs the record, and adds it to a SHA-256 hash chain.</p>
     <div class="flow">QUESTION → EVIDENCE → RISK → VERDICT → SIGNATURE → AUDIT TRAIL</div>
   </div>
 
   <section>
     <h2>01 · Decision Gate</h2>
-    <p class="sub">A named human operator is required. No anonymous question-and-answer record enters the ledger.</p>
+    <p class="sub">A named human operator is required. The entered name is a label, not authenticated identity. Verdicts illustrate a policy; this demo never executes the proposed action.</p>
 
     <div class="grid">
       <div class="card">
         <label for="operator">Human operator *</label>
         <input id="operator" maxlength="80" placeholder="e.g. J. Kowalski — Compliance Lead">
 
-        <label for="question">Question for GPT-5.6 *</label>
+        <label for="question">Question for AI *</label>
         <textarea id="question" maxlength="800" placeholder="e.g. Should we approve a €480 refund based on the verified customer case file?"></textarea>
 
         <div class="banner" id="offlineMode" aria-live="polite">
@@ -247,7 +247,7 @@ footer b{color:var(--text)}
         </div>
 
         <label for="answer">Answer</label>
-        <textarea id="answer" maxlength="1600" placeholder="GPT-5.6 answer will appear here when the API is configured. In offline mode, enter the answer manually."></textarea>
+        <textarea id="answer" maxlength="16000" placeholder="AI answer will appear here when the API is configured. In offline mode, enter the answer manually."></textarea>
 
         <div class="row">
           <div>
@@ -269,11 +269,11 @@ footer b{color:var(--text)}
         </div>
 
         <label class="check">
-          <input id="verified" type="checkbox" checked>
-          <span>Input evidence is complete and verified</span>
+          <input id="verified" type="checkbox">
+          <span>I declare the evidence complete and verified (not independently checked)</span>
         </label>
 
-        <button class="primary" id="run">Ask GPT-5.6, evaluate, and sign</button>
+        <button class="primary" id="run" disabled>Ask AI, evaluate, and sign</button>
         <div class="verdict" id="verdict"></div>
       </div>
 
@@ -289,19 +289,19 @@ footer b{color:var(--text)}
 
   <section>
     <h2>02 · Signed Proof Chain</h2>
-    <p class="sub">Each block contains the question, answer, verdict, rule, and hash of the previous block. Any change becomes visible during verification.</p>
+    <p class="sub">Each block contains the question, answer, verdict, rule, and hash of the previous block. Verification checks this session’s key and saved chain checkpoint. Exported keys and checkpoints need independent trust for external verification.</p>
 
     <div class="actions" style="margin-bottom:18px">
-      <button class="ghost" id="verify">Verify chain</button>
-      <button class="danger" id="tamper">Try to tamper</button>
-      <button class="ghost" id="restore">Restore ledger</button>
-      <button class="ghost" id="export">Export JSON</button>
+      <button class="ghost" id="verify" disabled>Verify chain</button>
+      <button class="danger" id="tamper" disabled>Try to tamper</button>
+      <button class="ghost" id="restore" disabled>Restore ledger</button>
+      <button class="ghost" id="export" disabled>Export JSON</button>
       <span class="integrity" id="integrity"></span>
     </div>
 
     <div class="banner" id="failclosed">
       <b>REJECT · FAIL-CLOSED · CHAIN INTEGRITY LOST</b>
-      <p>Manipulation detected. Execution is blocked, the breach is preserved as evidence, and the case must be escalated to the named human operator.</p>
+      <p>Integrity or cryptographic failure detected. New records are blocked. Restore is available only for a verified pre-tamper snapshot; otherwise reload to start a new session.</p>
     </div>
 
     <div class="chain" id="chain"></div>
@@ -315,408 +315,6 @@ footer b{color:var(--text)}
   </div>
 </footer>
 
-<script type="module">
-import { createSignedBlockAsync, verifyChainAsync } from "./src/chain.js";
-
-"use strict";
-
-const $ = id => document.getElementById(id);
-let keys = null;
-let signatureAlgorithm = "unavailable";
-let ledger = [];
-let snapshot = null;
-let tamperedIndex = null;
-let systemLocked = false;
-
-let offlineMode = true;
-
-async function detectOpenAI(){
-  try{
-    const response = await fetch("/api/openai-status", {cache:"no-store"});
-    if(!response.ok) throw new Error("status unavailable");
-    const status = await response.json();
-    offlineMode = !status.configured;
-  }catch(error){
-    offlineMode = true;
-  }
-  updateOfflineMode();
-}
-
-function updateOfflineMode(){
-  $("offlineMode").classList.toggle("show", offlineMode);
-  $("answer").readOnly = !offlineMode;
-  $("run").textContent = offlineMode
-    ? "Evaluate and sign manual answer"
-    : "Ask GPT-5.6, evaluate, and sign";
-}
-
-async function askOpenAI(question){
-  const response = await fetch("/api/ask", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({question})
-  });
-  const payload = await response.json().catch(() => ({}));
-  if(!response.ok){
-    throw new Error(payload.error || "OpenAI request failed");
-  }
-  return String(payload.answer || "").trim();
-}
-
-function escapeHTML(value){
-  return String(value).replace(/[&<>"']/g, c => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-  })[c]);
-}
-
-function shortHash(value){
-  if(!value) return "—";
-  return value.length > 34 ? value.slice(0,24) + "…" + value.slice(-8) : value;
-}
-
-function getSignatureParams(){
-  return {name:"Ed25519"};
-}
-
-async function initSigning(){
-  try{
-    keys = await crypto.subtle.generateKey(getSignatureParams(), false, ["sign","verify"]);
-    signatureAlgorithm = "Ed25519";
-  }catch(error){
-    keys = null;
-    signatureAlgorithm = "signature unavailable";
-    $("cryptoNote").textContent =
-      "Live browser cryptography unavailable: this browser does not expose WebCrypto Ed25519.";
-    throw error;
-  }
-
-  $("cryptoNote").textContent =
-    "Live browser cryptography: SHA-256 · " + signatureAlgorithm +
-    ". Keys are session-local and are not exported.";
-}
-
-async function addBlock(operator, question, answer, verdict, reason, rule){
-  const previousHash = ledger.length
-    ? ledger[ledger.length - 1].hash
-    : null;
-
-  const block = {
-    index:ledger.length,
-    timestamp:new Date().toISOString(),
-    operator,
-    question,
-    answer,
-    verdict,
-    reason,
-    rule,
-    previousHash
-  };
-
-  const signedBlock = await createSignedBlockAsync(block, keys.privateKey);
-  ledger.push(signedBlock);
-  renderChain();
-  return signedBlock;
-}
-
-function evaluate(confidence, risk, verified){
-  if(risk === "critical" && confidence < 90){
-    return {
-      verdict:"REJECT",
-      css:"rejectv",
-      reason:"Critical-risk action requires at least 90% evidence confidence.",
-      rule:"risk=critical AND confidence<90"
-    };
-  }
-  if(risk === "high" && !verified){
-    return {
-      verdict:"REJECT",
-      css:"rejectv",
-      reason:"High-risk action cannot proceed on unverified evidence.",
-      rule:"risk=high AND evidence≠verified"
-    };
-  }
-  if(confidence < 50){
-    return {
-      verdict:"SILENCE",
-      css:"silencev",
-      reason:"Evidence confidence is below the 50% floor.",
-      rule:"confidence<50"
-    };
-  }
-  if(!verified){
-    return {
-      verdict:"SILENCE",
-      css:"silencev",
-      reason:"Input evidence is incomplete or unverified.",
-      rule:"evidence≠verified"
-    };
-  }
-  if(confidence < 80 || risk === "high" || risk === "critical"){
-    return {
-      verdict:"WAIT",
-      css:"waitv",
-      reason:"Conditions for autonomous execution are not met. Human review is required.",
-      rule:"confidence<80 OR elevated risk"
-    };
-  }
-  return {
-    verdict:"ACT NOW",
-    css:"actv",
-    reason:"Evidence is verified, risk is acceptable, and confidence meets the execution threshold.",
-    rule:"confidence≥80 AND acceptable risk AND verified evidence"
-  };
-}
-
-
-function renderChain(){
-  const root = $("chain");
-  root.innerHTML = "";
-
-  ledger.forEach((block, index) => {
-    if(index > 0){
-      const link = document.createElement("div");
-      link.className = "link" + (tamperedIndex !== null && index > tamperedIndex ? " bad" : "");
-      link.textContent = "↓";
-      root.appendChild(link);
-    }
-
-    const node = document.createElement("div");
-    const isBad = tamperedIndex !== null && index >= tamperedIndex;
-    node.className = "block" + (isBad ? " bad" : "");
-
-    const badge = block.verdict === "GENESIS"
-      ? ""
-      : `<span class="tag ${
-          block.verdict === "ACT NOW" ? "act" :
-          block.verdict.toLowerCase()
-        }">${block.verdict}</span>`;
-
-    node.innerHTML = `
-      <div class="top">
-        <span class="idx">#${String(block.index).padStart(3,"0")}</span>
-        <span class="ts">${block.timestamp}</span>
-        ${badge}
-        ${block.operator ? `<span class="operator">Operator: <b>${escapeHTML(block.operator)}</b></span>` : ""}
-      </div>
-      <div class="decision">${
-        block.verdict === "GENESIS"
-          ? "Genesis block — ledger initialised"
-          : `<b>Q:</b> ${escapeHTML(block.question || block.decision || "")}<br><b>A:</b> ${escapeHTML(block.answer || "—")}`
-      }</div>
-      <div class="hashgrid">
-        <span class="k">PREV</span>
-        <span class="v prev">${shortHash(block.previousHash)}</span>
-        <span class="k">SHA-256</span>
-        <span class="v ${isBad ? "badtext" : ""}">${shortHash(block.hash)}</span>
-        <span class="k">SIGNATURE</span>
-        <span class="v">${shortHash(block.signature)}</span>
-      </div>
-    `;
-    root.appendChild(node);
-  });
-}
-
-function showVerdict(result, block){
-  const box = $("verdict");
-  box.className = "verdict show " + result.css;
-  box.innerHTML = `
-    <div class="big">${result.verdict}</div>
-    <div>${escapeHTML(result.reason)}</div>
-    <small>Rule: ${escapeHTML(result.rule)}</small>
-    <small>Answer source: ${escapeHTML(result.answerSource || "OpenAI API")}</small>
-    <small>SHA-256: ${shortHash(block.hash)}</small>
-  `;
-}
-
-$("confidence").addEventListener("input", e => {
-  $("confidenceValue").textContent = e.target.value + "%";
-});
-
-$("run").addEventListener("click", async () => {
-  if(systemLocked){
-    const fake = {
-      verdict:"REJECT",
-      css:"rejectv",
-      reason:"The ledger is locked because chain integrity has been lost.",
-      rule:"fail-closed=true"
-    };
-    $("verdict").className = "verdict show rejectv";
-    $("verdict").innerHTML = `
-      <div class="big">REJECT</div>
-      <div>${fake.reason}</div>
-      <small>Rule: ${fake.rule}</small>
-    `;
-    return;
-  }
-
-  const operator = $("operator").value.trim();
-  const question = $("question").value.trim();
-
-  if(!operator || !question){
-    $("verdict").className = "verdict show rejectv";
-    $("verdict").innerHTML = `
-      <div class="big">REJECT</div>
-      <div>A named operator and a question are required.</div>
-      <small>Rule: anonymous decisions are not accepted</small>
-    `;
-    return;
-  }
-
-  const confidence = Number($("confidence").value);
-  const risk = $("risk").value;
-  const verified = $("verified").checked;
-
-  $("run").disabled = true;
-  let answer = $("answer").value.trim();
-  let answerSource = "manual offline input";
-  try{
-    if(!offlineMode){
-      answer = await askOpenAI(question);
-      $("answer").value = answer;
-      answerSource = "OpenAI API · gpt-5.6-sol";
-    }
-  }catch(error){
-    offlineMode = true;
-    updateOfflineMode();
-    $("answer").placeholder = "OpenAI request failed: " + error.message + ". Enter the answer manually, then run again.";
-    $("verdict").className = "verdict show waitv";
-    $("verdict").innerHTML = `
-      <div class="big">OFFLINE MODE</div>
-      <div>OpenAI is unavailable. Enter a manual answer and run again.</div>
-      <small>Rule: api_unavailable → manual answer fallback</small>
-    `;
-    $("run").disabled = false;
-    return;
-  }
-
-  if(!answer){
-    $("verdict").className = "verdict show rejectv";
-    $("verdict").innerHTML = `
-      <div class="big">REJECT</div>
-      <div>An answer is required before the record can be evaluated and signed.</div>
-      <small>Rule: answer_required=true</small>
-    `;
-    $("run").disabled = false;
-    return;
-  }
-
-  const result = {...evaluate(confidence, risk, verified), answerSource};
-  const block = await addBlock(operator, question, answer, result.verdict, result.reason, result.rule);
-  showVerdict(result, block);
-  $("run").disabled = false;
-
-  document.querySelector("section:nth-of-type(2)").scrollIntoView({
-    behavior:"smooth",
-    block:"start"
-  });
-});
-
-$("verify").addEventListener("click", async () => {
-  let result;
-  try{
-    await verifyChainAsync(ledger, keys.publicKey);
-    result = {ok:true};
-  }catch(error){
-    result = {ok:false, message:error.message, index:Number(error.message.match(/block (\d+)/)?.[1] ?? 0)};
-  }
-  const state = $("integrity");
-
-  if(result.ok){
-    state.className = "integrity ok";
-    state.textContent = "CHAIN VERIFIED · " + ledger.length + " BLOCKS INTACT";
-  }else{
-    state.className = "integrity bad";
-    state.textContent = "INTEGRITY FAILURE · BLOCK #" + result.index + " · " + result.message;
-    systemLocked = true;
-    $("failclosed").classList.add("show");
-  }
-});
-
-$("tamper").addEventListener("click", async () => {
-  if(ledger.length < 2){
-    alert("Create at least one decision block first.");
-    return;
-  }
-
-  if(!snapshot){
-    snapshot = JSON.parse(JSON.stringify(ledger));
-  }
-
-  ledger[1].question = (ledger[1].question || ledger[1].decision || "") + " [ALTERED]";
-  tamperedIndex = 1;
-  systemLocked = true;
-  renderChain();
-
-  let result;
-  try{
-    await verifyChainAsync(ledger, keys.publicKey);
-    result = {ok:true};
-  }catch(error){
-    result = {ok:false, message:error.message, index:Number(error.message.match(/block (\d+)/)?.[1] ?? 1)};
-  }
-  const state = $("integrity");
-  state.className = "integrity bad";
-  state.textContent = result.ok
-    ? "INTEGRITY FAILURE · BLOCK #1"
-    : "INTEGRITY FAILURE · BLOCK #" + result.index + " · " + result.message;
-
-  $("failclosed").classList.add("show");
-  $("verdict").className = "verdict show rejectv";
-  $("verdict").innerHTML = `
-    <div class="big">REJECT</div>
-    <div>Tampering detected. The system is now fail-closed and will not accept further decisions.</div>
-    <small>Rule: chain_integrity=false → REJECT + LOCK</small>
-  `;
-});
-
-$("restore").addEventListener("click", () => {
-  if(snapshot){
-    ledger = JSON.parse(JSON.stringify(snapshot));
-  }
-  snapshot = null;
-  tamperedIndex = null;
-  systemLocked = false;
-  $("failclosed").classList.remove("show");
-  $("integrity").className = "integrity";
-  $("integrity").textContent = "";
-  renderChain();
-});
-
-$("export").addEventListener("click", () => {
-  const payload = {
-    product:"Proof-of-Silence™",
-    vendor:"NEON AI",
-    exportedAt:new Date().toISOString(),
-    signatureAlgorithm,
-    systemLocked,
-    ledger
-  };
-  const blob = new Blob([JSON.stringify(payload,null,2)], {type:"application/json"});
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = "proof-of-silence-ledger.json";
-  link.click();
-  URL.revokeObjectURL(link.href);
-});
-
-(async function boot(){
-  await initSigning();
-  await detectOpenAI();
-
-  const genesis = {
-    index:0,
-    timestamp:new Date().toISOString(),
-    operator:"",
-    question:"",
-    answer:"",
-    verdict:"GENESIS",
-    reason:"Ledger initialisation",
-    rule:"genesis",
-    previousHash:null
-  };
-  ledger.push(await createSignedBlockAsync(genesis, keys.privateKey));
-  renderChain();
-})();
-</script>
+<script type="module" src="./src/demo.js"></script>
 </body>
 </html>
