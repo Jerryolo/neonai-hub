@@ -1,11 +1,16 @@
 {
   "name": "neonai-hub",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test test/*.test.js",
+    "start": "node src/openai-proxy.js",
+    "test:browser": "node scripts/browser-smoke.mjs"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22.12"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
   }
 }

@@ -1,0 +1,35 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtemp, writeFile, rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {KeyObject, generateKeyPairSync} from 'node:crypto';
+import {execFile} from 'node:child_process';
+import {promisify} from 'node:util';
+import {DemoLedger} from '../src/demo.js';
+const run = promisify(execFile);
+
+test('export CLI requires external trust and rejects truncation, foreign keys and missing anchors', async t => {
+  const dir = await mkdtemp(join(tmpdir(), 'neonai-export-'));
+  t.after(() => rm(dir, {recursive: true, force: true}));
+  const keys = await crypto.subtle.generateKey('Ed25519', false, ['sign', 'verify']);
+  const session = new DemoLedger(keys); await session.initialize();
+  await session.append({operator: 'Tester', question: 'Demo?', answer: 'Yes', confidence: 86, risk: 'low', verified: true, answerSource: 'manual offline input'});
+  const data = await session.export();
+  const file = join(dir, 'export.json'), key = join(dir, 'public.pem'), anchor = join(dir, 'anchor.json');
+  await writeFile(file, JSON.stringify(data));
+  await writeFile(key, KeyObject.from(keys.publicKey).export({type: 'spki', format: 'pem'}));
+  await writeFile(anchor, JSON.stringify(data.sessionCheckpoint));
+  const args = ['src/verify-export.js', file, '--public-key', key, '--checkpoint', anchor];
+  const result = await run(process.execPath, args);
+  assert.equal(JSON.parse(result.stdout).status, 'INTEGRITY_VERIFIED');
+  const foreign = generateKeyPairSync('ed25519').publicKey.export({type: 'spki', format: 'pem'});
+  await writeFile(key, foreign);
+  await assert.rejects(run(process.execPath, args), e => e.code === 1 && e.stderr.includes('signature mismatch'));
+  await writeFile(key, KeyObject.from(keys.publicKey).export({type: 'spki', format: 'pem'}));
+  data.ledger.pop(); await writeFile(file, JSON.stringify(data));
+  await assert.rejects(run(process.execPath, args), e => e.code === 1 && e.stderr.includes('checkpoint'));
+  await assert.rejects(run(process.execPath, ['src/verify-export.js', file]), e => e.code === 2);
+  await writeFile(anchor, '{}');
+  await assert.rejects(run(process.execPath, args), e => e.code === 1 && e.stderr.includes('Trusted checkpoint'));
+});

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proof-of-Silence™ — Live Demo</title>
+<style>
+:root{
+  --ink:#0b1020;
+  --panel:#111a30;
+  --panel-2:#0e1526;
+  --line:#233252;
+  --text:#e8ecf6;
+  --muted:#8fa0c2;
+  --cyan:#39e0e8;
+  --green:#5df0a1;
+  --amber:#ffb545;
+  --violet:#9d8cff;
+  --red:#ff5570;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  background:
+    radial-gradient(900px 500px at 85% -10%,rgba(57,224,232,.08),transparent 60%),
+    radial-gradient(800px 500px at 10% 110%,rgba(157,140,255,.07),transparent 60%),
+    var(--ink);
+  color:var(--text);
+  font-family:var(--sans);
+  min-height:100vh;
+}
+button,input,textarea,select{font:inherit}
+.wrap{max-width:1040px;margin:auto;padding:0 20px}
+header{
+  position:sticky;top:0;z-index:10;
+  border-bottom:1px solid var(--line);
+  background:rgba(11,16,32,.92);
+  backdrop-filter:blur(10px);
+}
+.hrow{
+  min-height:68px;
+  display:flex;align-items:center;justify-content:space-between;gap:16px
+}
+.brand{display:flex;align-items:baseline;gap:10px}
+.neon{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--cyan);font-weight:700}
+.product{font-weight:700}
+.tm{font-size:10px;color:var(--muted);vertical-align:super}
+.status{
+  display:flex;align-items:center;gap:8px;
+  font:12px var(--mono);color:var(--green);
+  border:1px solid rgba(93,240,161,.35);
+  border-radius:999px;padding:6px 11px
+}
+.status::before{content:"●";animation:pulse 1.5s infinite}
+@keyframes pulse{50%{opacity:.35}}
+
+.hero{padding:54px 0 30px}
+.eyebrow{
+  font:12px var(--mono);letter-spacing:.2em;text-transform:uppercase;
+  color:var(--cyan);margin-bottom:12px
+}
+h1{font-size:clamp(32px,6vw,58px);line-height:1.02;margin:0;max-width:15ch}
+.hero p{color:var(--muted);font-size:18px;max-width:66ch;margin:18px 0 0}
+.flow{
+  margin-top:22px;
+  font:12px var(--mono);
+  color:var(--cyan);
+  letter-spacing:.06em
+}
+section{border-top:1px solid var(--line);padding:34px 0}
+h2{font-size:22px;margin:0 0 6px}
+.sub{color:var(--muted);margin:0 0 22px}
+.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:22px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:22px
+}
+label{
+  display:block;
+  color:var(--muted);
+  font:11px var(--mono);
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  margin:16px 0 7px
+}
+label:first-child{margin-top:0}
+input,textarea,select{
+  width:100%;
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-radius:9px;
+  color:var(--text);
+  padding:12px;
+  outline:none
+}
+textarea{min-height:112px;resize:vertical}
+input:focus,textarea:focus,select:focus{border-color:var(--cyan)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:580px){.row{grid-template-columns:1fr}}
+.sliderline{display:flex;gap:12px;align-items:center}
+.sliderline input{padding:0;accent-color:var(--cyan)}
+.sliderline strong{font:14px var(--mono);color:var(--cyan);min-width:44px;text-align:right}
+.check{display:flex;align-items:center;gap:10px;margin-top:16px}
+.check input{width:17px;height:17px;accent-color:var(--cyan)}
+.check span{font-size:14px}
+.primary,.ghost,.danger{
+  border-radius:9px;padding:12px 15px;cursor:pointer;font-weight:700;
+  transition:transform .08s,border-color .2s,color .2s
+}
+.primary{width:100%;margin-top:20px;background:var(--cyan);color:var(--ink);border:0}
+.primary:hover,.ghost:hover,.danger:hover{transform:translateY(-1px)}
+.primary:disabled{opacity:.45;cursor:not-allowed}
+.ghost,.danger{background:transparent;border:1px solid var(--line);color:var(--text)}
+.ghost:hover{border-color:var(--cyan);color:var(--cyan)}
+.danger:hover{border-color:var(--red);color:var(--red)}
+.actions{display:flex;flex-wrap:wrap;gap:10px}
+
+.rules h3{margin:0 0 14px;font:12px var(--mono);letter-spacing:.12em;text-transform:uppercase}
+.rule{
+  display:flex;gap:10px;align-items:flex-start;
+  padding:12px 0;border-bottom:1px solid rgba(35,50,82,.7);
+  color:var(--muted);font-size:14px
+}
+.rule:last-child{border-bottom:0}
+.tag{font:11px var(--mono);border-radius:5px;padding:3px 7px;white-space:nowrap}
+.act{color:var(--green);background:rgba(93,240,161,.12)}
+.wait{color:var(--amber);background:rgba(255,181,69,.12)}
+.silence{color:var(--violet);background:rgba(157,140,255,.12)}
+.reject{color:var(--red);background:rgba(255,85,112,.12)}
+
+.verdict{
+  display:none;
+  margin-top:18px;
+  border:1px solid;
+  border-radius:12px;
+  padding:18px;
+  animation:show .25s ease-out
+}
+@keyframes show{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.verdict.show{display:block}
+.verdict .big{font:700 25px var(--mono);margin-bottom:7px}
+.verdict small{display:block;color:var(--muted);margin-top:8px;font-family:var(--mono)}
+.verdict.actv{border-color:rgba(93,240,161,.5);background:rgba(93,240,161,.06)}
+.verdict.actv .big{color:var(--green)}
+.verdict.waitv{border-color:rgba(255,181,69,.5);background:rgba(255,181,69,.06)}
+.verdict.waitv .big{color:var(--amber)}
+.verdict.silencev{border-color:rgba(157,140,255,.5);background:rgba(157,140,255,.06)}
+.verdict.silencev .big{color:var(--violet)}
+.verdict.rejectv{border-color:rgba(255,85,112,.55);background:rgba(255,85,112,.08)}
+.verdict.rejectv .big{color:var(--red)}
+
+.banner{
+  display:none;margin:0 0 18px;
+  border:1px solid rgba(255,85,112,.6);
+  background:rgba(255,85,112,.09);
+  border-radius:12px;padding:16px
+}
+.banner.show{display:block;animation:show .25s ease-out}
+.banner b{font:700 13px var(--mono);color:var(--red);letter-spacing:.08em}
+.banner p{margin:7px 0 0;color:var(--text)}
+
+.chain{display:flex;flex-direction:column}
+.block{
+  position:relative;
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:16px 18px
+}
+.block.bad{border-color:var(--red);box-shadow:0 0 0 1px rgba(255,85,112,.25)}
+.block .top{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:10px}
+.idx{
+  font:700 11px var(--mono);
+  background:var(--cyan);color:var(--ink);
+  border-radius:4px;padding:2px 7px
+}
+.ts{font:11px var(--mono);color:var(--muted)}
+.operator{font-size:13px}
+.operator b{color:var(--cyan)}
+.decision{font-size:14px;margin-bottom:10px}
+.hashgrid{
+  display:grid;grid-template-columns:78px 1fr;gap:4px 10px;
+  font:11px var(--mono)
+}
+.hashgrid .k{color:var(--muted)}
+.hashgrid .v{color:var(--cyan);word-break:break-all}
+.hashgrid .prev{color:var(--violet)}
+.hashgrid .badtext{color:var(--red);text-decoration:line-through}
+.link{height:28px;display:flex;justify-content:center;align-items:center;color:var(--cyan)}
+.link.bad{color:var(--red)}
+.integrity{
+  display:none;align-items:center;
+  font:12px var(--mono);
+  border:1px solid;border-radius:8px;padding:9px 12px
+}
+.integrity.ok{display:flex;color:var(--green);border-color:rgba(93,240,161,.4)}
+.integrity.bad{display:flex;color:var(--red);border-color:rgba(255,85,112,.5)}
+footer{
+  border-top:1px solid var(--line);
+  padding:28px 0 42px;
+  color:var(--muted);font-size:13px
+}
+footer b{color:var(--text)}
+.note{font:11px var(--mono);margin-top:10px}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap hrow">
+    <div class="brand">
+      <span class="neon">NEON AI</span>
+      <span class="product">Proof-of-Silence<span class="tm">™</span></span>
+    </div>
+    <div class="status">LIVE DEMO</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="hero">
+    <div class="eyebrow">Cryptographic accountability layer for AI decisions</div>
+    <h1>Every decision signed. Every silence recorded.</h1>
+    <p>Submit a question. When configured, AI answers through the OpenAI API; otherwise the demo switches to a clearly labeled offline mode for manual answers. The illustrative policy evaluates your declared confidence, evidence status and risk, signs the record, and adds it to a SHA-256 hash chain.</p>
+    <div class="flow">QUESTION → EVIDENCE → RISK → VERDICT → SIGNATURE → AUDIT TRAIL</div>
+  </div>
+
+  <section>
+    <h2>01 · Decision Gate</h2>
+    <p class="sub">A named human operator is required. The entered name is a label, not authenticated identity. Verdicts illustrate a policy; this demo never executes the proposed action.</p>
+
+    <div class="grid">
+      <div class="card">
+        <label for="operator">Human operator *</label>
+        <input id="operator" maxlength="80" placeholder="e.g. J. Kowalski — Compliance Lead">
+
+        <label for="question">Question for AI *</label>
+        <textarea id="question" maxlength="800" placeholder="e.g. Should we approve a €480 refund based on the verified customer case file?"></textarea>
+
+        <div class="banner" id="offlineMode" aria-live="polite">
+          <b>OFFLINE MODE · MANUAL ANSWER REQUIRED</b>
+          <p>No OpenAI API key is configured on the local proxy. Type the answer below; it will still be evaluated, signed, and recorded.</p>
+        </div>
+
+        <label for="answer">Answer</label>
+        <textarea id="answer" maxlength="16000" placeholder="AI answer will appear here when the API is configured. In offline mode, enter the answer manually."></textarea>
+
+        <div class="row">
+          <div>
+            <label for="risk">Risk class</label>
+            <select id="risk">
+              <option value="low">Low — informational, reversible</option>
+              <option value="medium">Medium — operational impact</option>
+              <option value="high">High — financial, legal or personal data</option>
+              <option value="critical">Critical — safety or irreversible</option>
+            </select>
+          </div>
+          <div>
+            <label for="confidence">Evidence confidence</label>
+            <div class="sliderline">
+              <input id="confidence" type="range" min="0" max="100" value="86">
+              <strong id="confidenceValue">86%</strong>
+            </div>
+          </div>
+        </div>
+
+        <label class="check">
+          <input id="verified" type="checkbox">
+          <span>I declare the evidence complete and verified (not independently checked)</span>
+        </label>
+
+        <button class="primary" id="run" disabled>Ask AI, evaluate, and sign</button>
+        <div class="verdict" id="verdict"></div>
+      </div>
+
+      <div class="card rules">
+        <h3>Transparent verdict logic</h3>
+        <div class="rule"><span class="tag reject">REJECT</span><span>Critical action below 90% confidence, or high-risk action based on unverified evidence.</span></div>
+        <div class="rule"><span class="tag silence">SILENCE</span><span>Confidence below 50%, or incomplete evidence. The refusal is recorded.</span></div>
+        <div class="rule"><span class="tag wait">WAIT</span><span>Elevated risk or insufficient confidence for execution. Human review is required.</span></div>
+        <div class="rule"><span class="tag act">ACT NOW</span><span>Verified evidence, acceptable risk, and confidence of at least 80%.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>02 · Signed Proof Chain</h2>
+    <p class="sub">Each block contains the question, answer, verdict, rule, and hash of the previous block. Verification checks this session’s key and saved chain checkpoint. Exported keys and checkpoints need independent trust for external verification.</p>
+
+    <div class="actions" style="margin-bottom:18px">
+      <button class="ghost" id="verify" disabled>Verify chain</button>
+      <button class="danger" id="tamper" disabled>Try to tamper</button>
+      <button class="ghost" id="restore" disabled>Restore ledger</button>
+      <button class="ghost" id="export" disabled>Export JSON</button>
+      <span class="integrity" id="integrity"></span>
+    </div>
+
+    <div class="banner" id="failclosed">
+      <b>REJECT · FAIL-CLOSED · CHAIN INTEGRITY LOST</b>
+      <p>Integrity or cryptographic failure detected. New records are blocked. Restore is available only for a verified pre-tamper snapshot; otherwise reload to start a new session.</p>
+    </div>
+
+    <div class="chain" id="chain"></div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <b>Regulatory positioning.</b> Proof-of-Silence™ supports key EU AI Act requirements including record-keeping, traceability and human oversight. It is an accountability layer, not a certification, and does not by itself make a system compliant.
+    <div class="note" id="cryptoNote">Initialising cryptography…</div>
+  </div>
+</footer>
+
+<script type="module" src="./src/demo.js"></script>
+</body>
+</html>
