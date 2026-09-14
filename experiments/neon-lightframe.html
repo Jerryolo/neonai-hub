@@ -790,8 +790,8 @@
       left: 50%;
       bottom: calc(12px + env(safe-area-inset-bottom));
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      width: min(440px, calc(100% - 28px));
+      grid-template-columns: repeat(4, 1fr);
+      width: min(520px, calc(100% - 28px));
       padding: 5px;
       transform: translateX(-50%);
       border: 1px solid rgba(113, 219, 255, .2);
@@ -1017,7 +1017,7 @@
           <h2 id="challengeTitle">10 000 prób złamania c</h2>
           <p>Telefon przeliczy transformację prędkości światła dla 10 000 różnych prędkości obserwatora. To prawdziwy test numeryczny kodu — nie eksperyment fizyczny.</p>
         </div>
-        <span class="index">04.5</span>
+        <span class="index">04 / 06</span>
       </div>
       <div class="challenge-body">
         <div class="challenge-console">
@@ -1037,6 +1037,38 @@
       </div>
     </section>
 
+    <section class="panel" id="optimization" aria-labelledby="optimizationTitle">
+      <div class="panel-head">
+        <div>
+          <div class="section-kicker">Autooptymalizacja · urządzenie pod kontrolą</div>
+          <h2 id="optimizationTitle">AUTO · zachowaj płynność, nie zmieniaj prawdy</h2>
+          <p>Kalibrator mierzy wyłącznie koszt renderowania na tym urządzeniu. Dobiera częstotliwość rysowania i limit gęstości pikseli; równania, dane wejściowe i bramka Proof-of-Silence pozostają zablokowane.</p>
+        </div>
+        <span class="index">05 / 06</span>
+      </div>
+      <div class="challenge-body">
+        <div class="challenge-console">
+          <div class="challenge-title">
+            <strong id="optimizationHeadline">AUTO · GOTOWY</strong>
+            <span id="optimizationReason">ADAPTIVE_RENDERING_ONLY<br>PHYSICS_LOCKED</span>
+          </div>
+          <p>System zbierze 120 rzeczywistych próbek klatek i wybierze profil QUALITY, BALANCED albo ECO. Strażnik używa histerezy i 15-sekundowego okresu ochronnego, aby nie przełączać profili nerwowo.</p>
+          <button class="action gold" id="optimizeButton" type="button">AUTOOPTYMALIZUJ</button>
+          <div class="challenge-output" aria-live="polite">
+            <div><small>PROFIL</small><b id="optimizationProfile">BALANCED</b></div>
+            <div><small>ŚREDNIE FPS</small><b id="optimizationFps">—</b></div>
+            <div><small>P95 KLATKI</small><b id="optimizationP95">—</b></div>
+          </div>
+          <ul class="checklist" aria-label="Blokady autooptymalizacji">
+            <li><span>OPTIMIZER POLICY SELF-TEST</span><b class="status" id="optimizerPolicyStatus">PENDING</b></li>
+            <li><span>PHYSICS PARAMETERS CHANGED</span><b class="status pass">FALSE</b></li>
+            <li><span>PROOF GATE CHANGED</span><b class="status pass">FALSE</b></li>
+          </ul>
+          <p class="integrity-note">Autooptymalizacja nie jest samomodyfikacją modelu. Nie zmienia β, transformacji Lorentza, tolerancji testu ani warunków ACT NOW / SILENCE. Profil i metryki trafiają do rekordu.</p>
+        </div>
+      </div>
+    </section>
+
     <section class="panel" id="proof" aria-labelledby="proofTitle">
       <div class="panel-head">
         <div>
@@ -1044,7 +1076,7 @@
           <h2 id="proofTitle">Co wolno powiedzieć?</h2>
           <p>Ten sam ekran rozdziela prawidłowy wniosek z modelu od twierdzenia, którego telefon nie zmierzył.</p>
         </div>
-        <span class="index">05 / 05</span>
+        <span class="index">06 / 06</span>
       </div>
       <div class="gate-body">
         <div class="verdict-grid">
@@ -1087,7 +1119,7 @@
     </section>
 
     <footer>
-      NEON LIGHTFRAME v1.0 · EDUCATIONAL SIMULATION · NO NETWORK CALLS<br>
+      NEON LIGHTFRAME v1.1 · EDUCATIONAL SIMULATION · NO NETWORK CALLS<br>
       Proof-of-Silence™ · NO PROOF → NO ACTION · neonai.shop
     </footer>
   </main>
@@ -1095,7 +1127,8 @@
   <nav class="dock" aria-label="Nawigacja sekcji">
     <a href="#experiment">01 · ŚWIATŁO</a>
     <a href="#spacetime">02 · CZAS</a>
-    <a href="#proof">03 · DOWÓD</a>
+    <a href="#optimization">03 · AUTO</a>
+    <a href="#proof">04 · DOWÓD</a>
   </nav>
 
   <div id="toast" role="status" aria-live="polite"></div>
@@ -1114,7 +1147,29 @@
       selfTestPass: false,
       challenge: null,
       sealed: null,
-      verified: false
+      verified: false,
+      optimization: {
+        enabled: true,
+        calibrating: false,
+        calibrated: false,
+        profile: "BALANCED",
+        targetFps: 45,
+        renderIntervalMs: 1000 / 45,
+        dprCap: 1.5,
+        sampleGoal: 120,
+        frameIntervals: [],
+        renderCosts: [],
+        lastDrawAt: 0,
+        startedAt: null,
+        calibratedAt: null,
+        observed: null,
+        adaptationCount: 0,
+        headroomWindows: 0,
+        lastGuardianAt: performance.now(),
+        cooldownUntil: 0,
+        policySelfTestPass: false,
+        reasonCode: "AUTO_NOT_CALIBRATED"
+      }
     };
 
     var ui = {
@@ -1142,6 +1197,13 @@
       challengeBreaches: document.getElementById("challengeBreaches"),
       challengeError: document.getElementById("challengeError"),
       challengeStatus: document.getElementById("challengeStatus"),
+      optimizationHeadline: document.getElementById("optimizationHeadline"),
+      optimizationReason: document.getElementById("optimizationReason"),
+      optimizationProfile: document.getElementById("optimizationProfile"),
+      optimizationFps: document.getElementById("optimizationFps"),
+      optimizationP95: document.getElementById("optimizationP95"),
+      optimizeButton: document.getElementById("optimizeButton"),
+      optimizerPolicyStatus: document.getElementById("optimizerPolicyStatus"),
       parityStatus: document.getElementById("parityStatus"),
       hashSelfTestStatus: document.getElementById("hashSelfTestStatus"),
       modelVerdict: document.getElementById("modelVerdict"),
@@ -1355,7 +1417,7 @@
 
     function surface(canvas) {
       var rect = canvas.getBoundingClientRect();
-      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      var dpr = Math.min(window.devicePixelRatio || 1, state.optimization.dprCap);
       var pixelWidth = Math.max(1, Math.round(rect.width * dpr));
       var pixelHeight = Math.max(1, Math.round(rect.height * dpr));
       if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
@@ -1789,13 +1851,161 @@
       haptic();
     }
 
+    function percentile(values, fraction) {
+      if (!values.length) return 0;
+      var ordered = values.slice().sort(function (a, b) { return a - b; });
+      var index = Math.min(ordered.length - 1, Math.max(0, Math.ceil(fraction * ordered.length) - 1));
+      return ordered[index];
+    }
+
+    function summarizePerformance() {
+      var intervals = state.optimization.frameIntervals;
+      var costs = state.optimization.renderCosts;
+      var averageFrameMs = intervals.length ? intervals.reduce(function (sum, value) { return sum + value; }, 0) / intervals.length : 0;
+      var averageRenderMs = costs.length ? costs.reduce(function (sum, value) { return sum + value; }, 0) / costs.length : 0;
+      return {
+        sample_count: intervals.length,
+        average_fps: Number((averageFrameMs ? Math.min(240, 1000 / averageFrameMs) : 0).toFixed(2)),
+        p95_frame_ms: Number(percentile(intervals, .95).toFixed(2)),
+        average_render_ms: Number(averageRenderMs.toFixed(3))
+      };
+    }
+
+    function selectOptimizationProfile(metrics) {
+      if (metrics.p95_frame_ms <= 20 && metrics.average_render_ms <= 10) return "QUALITY";
+      if (metrics.p95_frame_ms <= 30 && metrics.average_render_ms <= 18) return "BALANCED";
+      return "ECO";
+    }
+
+    function applyOptimizationProfile(profile, reasonCode, countAdjustment) {
+      var profiles = {
+        QUALITY: { targetFps: 60, renderIntervalMs: 1000 / 60, dprCap: 2 },
+        BALANCED: { targetFps: 45, renderIntervalMs: 1000 / 45, dprCap: 1.5 },
+        ECO: { targetFps: 30, renderIntervalMs: 1000 / 30, dprCap: 1 }
+      };
+      var selected = profiles[profile] || profiles.BALANCED;
+      var changed = state.optimization.profile !== profile;
+      state.optimization.profile = profile in profiles ? profile : "BALANCED";
+      state.optimization.targetFps = selected.targetFps;
+      state.optimization.renderIntervalMs = selected.renderIntervalMs;
+      state.optimization.dprCap = selected.dprCap;
+      state.optimization.reasonCode = reasonCode;
+      state.optimization.lastDrawAt = 0;
+      if (changed && countAdjustment) {
+        state.optimization.adaptationCount += 1;
+        state.optimization.cooldownUntil = performance.now() + 15000;
+        invalidateRecord();
+      }
+      updateOptimizationUI();
+    }
+
+    function updateOptimizationUI() {
+      var o = state.optimization;
+      var progress = Math.min(100, Math.round(o.frameIntervals.length / o.sampleGoal * 100));
+      ui.optimizationHeadline.textContent = o.calibrating ? "AUTO · KALIBRACJA " + progress + "%" : o.calibrated ? "AUTO · ACTIVE" : "AUTO · GOTOWY";
+      ui.optimizationProfile.textContent = o.profile;
+      ui.optimizationFps.textContent = o.observed ? o.observed.average_fps.toFixed(1) : "—";
+      ui.optimizationP95.textContent = o.observed ? o.observed.p95_frame_ms.toFixed(1) + " ms" : "—";
+      ui.optimizationReason.textContent = o.reasonCode + "\nTARGET " + o.targetFps + " FPS · DPR≤" + o.dprCap;
+      ui.optimizeButton.disabled = o.calibrating;
+      ui.optimizeButton.textContent = o.calibrating ? "KALIBRACJA W TOKU…" : o.calibrated ? "REKALIBRUJ" : "AUTOOPTYMALIZUJ";
+    }
+
+    function resetOptimizationWindow() {
+      state.optimization.frameIntervals = [];
+      state.optimization.renderCosts = [];
+      state.optimization.lastGuardianAt = performance.now();
+    }
+
+    function startAutoOptimization() {
+      if (state.optimization.calibrating || document.hidden) return;
+      resetOptimizationWindow();
+      state.optimization.calibrating = true;
+      state.optimization.calibrated = false;
+      state.optimization.startedAt = new Date().toISOString();
+      applyOptimizationProfile("QUALITY", "DEVICE_CALIBRATION_RUNNING", false);
+      invalidateRecord();
+      updateOptimizationUI();
+      showToast("AUTO: zbieram 120 próbek. Matematyka pozostaje zablokowana.");
+    }
+
+    function finishAutoOptimization() {
+      var o = state.optimization;
+      var metrics = summarizePerformance();
+      var profile = selectOptimizationProfile(metrics);
+      o.calibrating = false;
+      o.calibrated = true;
+      o.calibratedAt = new Date().toISOString();
+      o.observed = metrics;
+      applyOptimizationProfile(profile, "DEVICE_CALIBRATION_PASS", false);
+      resetOptimizationWindow();
+      invalidateRecord();
+      updateOptimizationUI();
+      showToast("AUTO: profil " + profile + " · " + metrics.average_fps.toFixed(1) + " FPS · fizyka bez zmian.");
+      haptic();
+    }
+
+    function guardianReview(now) {
+      var o = state.optimization;
+      if (!o.calibrated || o.calibrating || now < o.cooldownUntil) return;
+      if (now - o.lastGuardianAt < 5000 || o.frameIntervals.length < 30) return;
+      var metrics = summarizePerformance();
+      var next = o.profile;
+      var stressed = metrics.p95_frame_ms > 34 || metrics.average_render_ms > 20;
+      var headroom = metrics.p95_frame_ms < 20 && metrics.average_render_ms < 9;
+      if (stressed) {
+        o.headroomWindows = 0;
+        if (o.profile === "QUALITY") next = "BALANCED";
+        else if (o.profile === "BALANCED") next = "ECO";
+      } else if (headroom) {
+        o.headroomWindows += 1;
+        if (o.headroomWindows >= 3) {
+          if (o.profile === "ECO") next = "BALANCED";
+          else if (o.profile === "BALANCED") next = "QUALITY";
+          o.headroomWindows = 0;
+        }
+      } else {
+        o.headroomWindows = 0;
+      }
+      o.observed = metrics;
+      if (next !== o.profile) {
+        applyOptimizationProfile(next, stressed ? "SUSTAINED_RENDER_PRESSURE" : "SUSTAINED_RENDER_HEADROOM", true);
+        showToast("AUTO: profil " + next + " · równania i PoS bez zmian.");
+      }
+      resetOptimizationWindow();
+      updateOptimizationUI();
+    }
+
+    function collectOptimizationSample(frameIntervalMs, renderCostMs, drew, now) {
+      var o = state.optimization;
+      if (!drew || document.hidden || frameIntervalMs <= 0 || frameIntervalMs > 250) return;
+      o.frameIntervals.push(frameIntervalMs);
+      o.renderCosts.push(renderCostMs);
+      if (o.calibrating) {
+        if (o.frameIntervals.length % 12 === 0) updateOptimizationUI();
+        if (o.frameIntervals.length >= o.sampleGoal) finishAutoOptimization();
+      } else {
+        guardianReview(now);
+      }
+    }
+
     function animate(now) {
-      var delta = Math.min(.05, Math.max(0, (now - state.lastFrame) / 1000));
+      var frameIntervalMs = Math.max(0, now - state.lastFrame);
+      var delta = Math.min(.05, frameIntervalMs / 1000);
       state.lastFrame = now;
       if (!state.paused) state.simTime += delta;
-      drawScene();
-      drawCone();
-      drawLens();
+      var o = state.optimization;
+      var drew = o.lastDrawAt === 0 || now - o.lastDrawAt >= o.renderIntervalMs - .5;
+      var renderCostMs = 0;
+      if (drew) {
+        var renderStart = performance.now();
+        drawScene();
+        drawCone();
+        drawLens();
+        renderCostMs = performance.now() - renderStart;
+        o.lastDrawAt = now;
+      }
+      collectOptimizationSample(frameIntervalMs, renderCostMs, drew, now);
       requestAnimationFrame(animate);
     }
 
@@ -1851,9 +2061,17 @@
       var expectedHash = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
       if (knownHash !== expectedHash) failures.push("SHA256_ABC");
 
+      var optimizerPolicyPass =
+        selectOptimizationProfile({ p95_frame_ms: 18, average_render_ms: 6 }) === "QUALITY" &&
+        selectOptimizationProfile({ p95_frame_ms: 26, average_render_ms: 13 }) === "BALANCED" &&
+        selectOptimizationProfile({ p95_frame_ms: 42, average_render_ms: 24 }) === "ECO";
+      state.optimization.policySelfTestPass = optimizerPolicyPass;
+      if (!optimizerPolicyPass) failures.push("OPTIMIZER_POLICY");
+
       state.selfTestPass = failures.length === 0;
       setStatus(ui.parityStatus, failures.some(function (value) { return value.indexOf("_C_") >= 0; }) ? "FAIL" : "PASS", failures.some(function (value) { return value.indexOf("_C_") >= 0; }) ? "fail" : "pass");
       setStatus(ui.hashSelfTestStatus, knownHash === expectedHash ? "PASS" : "FAIL", knownHash === expectedHash ? "pass" : "fail");
+      setStatus(ui.optimizerPolicyStatus, optimizerPolicyPass ? "PASS" : "FAIL", optimizerPolicyPass ? "pass" : "fail");
 
       if (state.selfTestPass) {
         ui.modelVerdict.textContent = "ACT NOW";
@@ -1870,14 +2088,30 @@
     function makeRecordPayload() {
       var values = derive(state.beta);
       return {
-        protocol: "NEON-LIGHTFRAME/1.0",
+        protocol: "NEON-LIGHTFRAME/1.1",
         record_type: "EDUCATIONAL_SIMULATION_RECEIPT",
         record_id: "lf-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10),
         sealed_at: new Date().toISOString(),
         runtime: {
           form: "single_html",
           network_calls: 0,
-          external_measurement: false
+          external_measurement: false,
+          renderer_optimization: {
+            policy: "ADAPTIVE_RENDERING_ONLY",
+            mode: "AUTO",
+            status: state.optimization.calibrated ? "CALIBRATED" : "NOT_CALIBRATED",
+            profile: state.optimization.profile,
+            target_fps: state.optimization.targetFps,
+            dpr_cap: state.optimization.dprCap,
+            render_interval_ms: Number(state.optimization.renderIntervalMs.toFixed(3)),
+            calibration_started_at: state.optimization.startedAt,
+            calibrated_at: state.optimization.calibratedAt,
+            observed: state.optimization.observed,
+            adaptation_count: state.optimization.adaptationCount,
+            reason_code: state.optimization.reasonCode,
+            physics_parameters_changed: false,
+            proof_gate_changed: false
+          }
         },
         input: {
           beta_v_over_c: Number(state.beta.toFixed(6)),
@@ -1893,6 +2127,7 @@
         },
         checks: {
           local_math_self_test: state.selfTestPass ? "PASS" : "FAIL",
+          optimizer_policy_self_test: state.optimization.policySelfTestPass ? "PASS" : "FAIL",
           astra_10000_grid: state.challenge,
           external_physical_measurement: "MISSING"
         },
@@ -2033,6 +2268,7 @@
 
     ui.measureButton.addEventListener("click", simulateDetection);
     ui.challengeButton.addEventListener("click", runChallenge);
+    ui.optimizeButton.addEventListener("click", startAutoOptimization);
     ui.sealButton.addEventListener("click", sealRecord);
     ui.verifyButton.addEventListener("click", verifyRecord);
     ui.exportButton.addEventListener("click", exportRecord);
@@ -2043,6 +2279,12 @@
 
     window.addEventListener("online", updateRuntimeStatus);
     window.addEventListener("offline", updateRuntimeStatus);
+    document.addEventListener("visibilitychange", function () {
+      state.lastFrame = performance.now();
+      if (!document.hidden && !state.optimization.calibrated && !state.optimization.calibrating) {
+        setTimeout(startAutoOptimization, 300);
+      }
+    });
     window.addEventListener("resize", function () {
       drawScene();
       drawCone();
@@ -2051,8 +2293,10 @@
 
     updateRuntimeStatus();
     updateReadouts();
+    updateOptimizationUI();
     runSelfTests();
     requestAnimationFrame(animate);
+    setTimeout(startAutoOptimization, 600);
   </script>
 </body>
 </html>
