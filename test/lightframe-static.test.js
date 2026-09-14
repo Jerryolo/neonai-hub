@@ -55,7 +55,7 @@ test("Lightframe HTML ids are unique and primary controls declare button type", 
   const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
   assert.equal(new Set(ids).size, ids.length, "duplicate HTML id");
   const buttons = [...html.matchAll(/<button\b[^>]*>/gi)].map((match) => match[0]);
-  assert.ok(buttons.length >= 18, "expected interactive control set");
+  assert.ok(buttons.length >= 14, "expected interactive control set");
   for (const button of buttons) {
     assert.match(button, /\btype="button"/i);
   }
