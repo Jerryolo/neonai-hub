@@ -1,0 +1,2056 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#050812">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="NEON Lightframe — lokalna, edukacyjna symulacja niezmienniczości prędkości światła.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; font-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>NEON · LIGHTFRAME</title>
+  <style>
+    :root {
+      --bg: #04060c;
+      --panel: rgba(9, 14, 27, .86);
+      --panel-2: rgba(12, 19, 35, .92);
+      --line: rgba(113, 219, 255, .18);
+      --line-strong: rgba(113, 219, 255, .42);
+      --ink: #eef8ff;
+      --muted: #9db0c7;
+      --dim: #6f819b;
+      --cyan: #41e8ff;
+      --cyan-2: #00aeea;
+      --violet: #bd6dff;
+      --gold: #ffcf5c;
+      --green: #53f5a5;
+      --red: #ff5b7d;
+      --radius: 24px;
+      --mono: ui-monospace, "SFMono-Regular", "Roboto Mono", Consolas, monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      background: var(--bg);
+    }
+
+    body {
+      margin: 0;
+      min-height: 100%;
+      overflow-x: hidden;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 80% 3%, rgba(31, 77, 150, .24), transparent 32rem),
+        radial-gradient(circle at 10% 40%, rgba(94, 32, 151, .12), transparent 30rem),
+        linear-gradient(180deg, #060912 0%, #03050a 100%);
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    button, input { font: inherit; }
+
+    button {
+      color: inherit;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    button:focus-visible, input:focus-visible, a:focus-visible {
+      outline: 3px solid rgba(65, 232, 255, .72);
+      outline-offset: 3px;
+    }
+
+    .noise {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .16;
+      z-index: 20;
+      background-image:
+        linear-gradient(rgba(255,255,255,.016) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.012) 1px, transparent 1px);
+      background-size: 5px 5px, 7px 7px;
+      mask-image: linear-gradient(to bottom, #000, transparent 90%);
+    }
+
+    .shell {
+      width: min(1120px, calc(100% - 28px));
+      margin: 0 auto;
+    }
+
+    header {
+      position: relative;
+      padding: calc(24px + env(safe-area-inset-top)) 0 22px;
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      color: var(--ink);
+      letter-spacing: .2em;
+      font: 700 12px/1 var(--mono);
+    }
+
+    .mark {
+      display: grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      border: 1px solid var(--line-strong);
+      border-radius: 11px;
+      color: var(--cyan);
+      background: rgba(65, 232, 255, .06);
+      box-shadow: inset 0 0 22px rgba(65, 232, 255, .08), 0 0 20px rgba(65, 232, 255, .07);
+      font-size: 18px;
+    }
+
+    .runtime {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 12px;
+      gap: 8px;
+      border: 1px solid rgba(83, 245, 165, .25);
+      border-radius: 999px;
+      color: var(--green);
+      background: rgba(83, 245, 165, .055);
+      font: 700 10px/1 var(--mono);
+      letter-spacing: .08em;
+      white-space: nowrap;
+    }
+
+    .runtime::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 12px currentColor;
+    }
+
+    .hero-copy {
+      max-width: 850px;
+      padding: 54px 0 26px;
+    }
+
+    .kicker, .section-kicker {
+      margin: 0 0 11px;
+      color: var(--gold);
+      font: 700 11px/1.5 var(--mono);
+      letter-spacing: .24em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 920px;
+      font-size: clamp(48px, 10vw, 108px);
+      line-height: .86;
+      letter-spacing: -.065em;
+      font-weight: 850;
+    }
+
+    h1 span {
+      color: transparent;
+      background: linear-gradient(110deg, #ffffff 4%, #73efff 45%, #9672ff 88%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      filter: drop-shadow(0 0 22px rgba(65, 232, 255, .14));
+    }
+
+    .hero-copy p {
+      max-width: 680px;
+      margin: 23px 0 0;
+      color: #b8c7d8;
+      font-size: clamp(16px, 2.8vw, 21px);
+      line-height: 1.55;
+    }
+
+    .hero-rule {
+      display: inline-block;
+      margin-top: 18px;
+      color: var(--cyan);
+      font: 700 13px/1.4 var(--mono);
+      letter-spacing: .08em;
+    }
+
+    main {
+      display: grid;
+      gap: 18px;
+      padding-bottom: calc(110px + env(safe-area-inset-bottom));
+    }
+
+    .panel {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(145deg, rgba(13, 21, 40, .92), rgba(5, 8, 16, .92));
+      box-shadow: 0 20px 80px rgba(0, 0, 0, .3), inset 0 1px 0 rgba(255,255,255,.025);
+    }
+
+    .panel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(115deg, rgba(65, 232, 255, .04), transparent 33%, transparent 68%, rgba(189, 109, 255, .035));
+    }
+
+    .panel-head {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 22px 22px 0;
+    }
+
+    .panel-head h2 {
+      margin: 0;
+      font-size: clamp(22px, 4vw, 32px);
+      letter-spacing: -.025em;
+    }
+
+    .panel-head p {
+      max-width: 620px;
+      margin: 8px 0 0;
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    .index {
+      color: var(--cyan);
+      font: 700 12px/1 var(--mono);
+      letter-spacing: .14em;
+    }
+
+    .segmented {
+      position: relative;
+      z-index: 2;
+      display: inline-grid;
+      grid-auto-flow: column;
+      gap: 4px;
+      margin: 18px 22px 12px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(1, 4, 10, .65);
+    }
+
+    .segmented button {
+      min-height: 42px;
+      padding: 0 14px;
+      border: 0;
+      border-radius: 10px;
+      color: var(--muted);
+      background: transparent;
+      font: 700 11px/1 var(--mono);
+      letter-spacing: .08em;
+    }
+
+    .segmented button[aria-pressed="true"] {
+      color: #031016;
+      background: var(--cyan);
+      box-shadow: 0 0 24px rgba(65, 232, 255, .2);
+    }
+
+    .canvas-wrap {
+      position: relative;
+      z-index: 1;
+      margin: 0 12px 12px;
+      overflow: hidden;
+      border: 1px solid rgba(113, 219, 255, .12);
+      border-radius: 18px;
+      background: #030711;
+    }
+
+    #lightScene {
+      display: block;
+      width: 100%;
+      height: clamp(310px, 56vw, 430px);
+    }
+
+    .scene-overlay {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      bottom: 13px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+      pointer-events: none;
+    }
+
+    .formula {
+      max-width: 78%;
+      padding: 8px 10px;
+      border: 1px solid rgba(65, 232, 255, .17);
+      border-radius: 9px;
+      color: #bcefff;
+      background: rgba(2, 7, 15, .76);
+      backdrop-filter: blur(9px);
+      font: 600 11px/1.45 var(--mono);
+    }
+
+    .live-dot {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      color: var(--green);
+      background: rgba(3, 12, 16, .82);
+      font: 700 10px/1 var(--mono);
+      white-space: nowrap;
+    }
+
+    .live-dot::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 10px currentColor;
+    }
+
+    .control-zone {
+      position: relative;
+      z-index: 1;
+      padding: 16px 22px 23px;
+      border-top: 1px solid rgba(113, 219, 255, .1);
+    }
+
+    .velocity-line {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .velocity-line label {
+      color: var(--muted);
+      font: 700 11px/1.4 var(--mono);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .velocity-value {
+      color: var(--cyan);
+      font: 800 clamp(22px, 5vw, 32px)/1 var(--mono);
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 28px;
+      margin: 0;
+      appearance: none;
+      background: transparent;
+    }
+
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 5px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--violet), var(--cyan));
+      box-shadow: 0 0 18px rgba(65, 232, 255, .14);
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      width: 28px;
+      height: 28px;
+      margin-top: -11px;
+      appearance: none;
+      border: 4px solid #d9fbff;
+      border-radius: 50%;
+      background: var(--cyan-2);
+      box-shadow: 0 0 0 6px rgba(65, 232, 255, .12), 0 0 24px rgba(65, 232, 255, .55);
+    }
+
+    input[type="range"]::-moz-range-track {
+      height: 5px;
+      border: 0;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--violet), var(--cyan));
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      border: 4px solid #d9fbff;
+      border-radius: 50%;
+      background: var(--cyan-2);
+      box-shadow: 0 0 0 6px rgba(65, 232, 255, .12);
+    }
+
+    .scale-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 4px;
+      color: var(--dim);
+      font: 10px/1 var(--mono);
+    }
+
+    .quick-row, .action-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-top: 17px;
+    }
+
+    .chip, .action {
+      min-height: 46px;
+      padding: 0 15px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      color: var(--ink);
+      background: rgba(8, 15, 28, .88);
+      font: 700 11px/1 var(--mono);
+      letter-spacing: .055em;
+    }
+
+    .chip:hover, .action:hover {
+      border-color: var(--line-strong);
+      background: rgba(16, 29, 50, .92);
+    }
+
+    .chip.active {
+      color: #021116;
+      border-color: var(--cyan);
+      background: var(--cyan);
+    }
+
+    .action.primary {
+      color: #031016;
+      border-color: var(--cyan);
+      background: var(--cyan);
+      box-shadow: 0 0 24px rgba(65, 232, 255, .15);
+    }
+
+    .action.gold {
+      color: #171000;
+      border-color: var(--gold);
+      background: var(--gold);
+    }
+
+    .action:disabled {
+      cursor: not-allowed;
+      opacity: .38;
+      filter: grayscale(.5);
+    }
+
+    .science-note {
+      margin: 14px 0 0;
+      padding-left: 14px;
+      border-left: 2px solid var(--violet);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .metrics-grid {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      padding: 18px 18px 22px;
+    }
+
+    .metric {
+      min-height: 126px;
+      padding: 16px;
+      border: 1px solid rgba(113, 219, 255, .12);
+      border-radius: 17px;
+      background: rgba(3, 8, 17, .68);
+    }
+
+    .metric .label {
+      color: var(--dim);
+      font: 700 10px/1.35 var(--mono);
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+
+    .metric .number {
+      display: block;
+      margin-top: 16px;
+      color: var(--ink);
+      font: 800 clamp(23px, 5vw, 37px)/1 var(--mono);
+      letter-spacing: -.04em;
+    }
+
+    .metric .number.cyan { color: var(--cyan); }
+    .metric .number.violet { color: #d09bff; }
+    .metric .number.gold { color: var(--gold); }
+
+    .metric small {
+      display: block;
+      margin-top: 9px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .two-col {
+      display: grid;
+      gap: 18px;
+    }
+
+    .cone-body, .lens-body, .challenge-body, .gate-body {
+      position: relative;
+      z-index: 1;
+      padding: 18px 18px 22px;
+    }
+
+    #coneCanvas {
+      display: block;
+      width: 100%;
+      height: 360px;
+      border: 1px solid rgba(113, 219, 255, .12);
+      border-radius: 18px;
+      background: #030711;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px 16px;
+      margin-top: 14px;
+      color: var(--muted);
+      font: 10px/1.4 var(--mono);
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .swatch {
+      width: 18px;
+      height: 3px;
+      border-radius: 99px;
+      background: currentColor;
+      box-shadow: 0 0 8px currentColor;
+    }
+
+    .lens-stage {
+      display: grid;
+      place-items: center;
+      padding: 10px 0 4px;
+    }
+
+    #lensCanvas {
+      display: block;
+      width: min(100%, 430px);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: #02060d;
+      filter: drop-shadow(0 0 22px rgba(65, 232, 255, .1));
+    }
+
+    .mode-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+      margin-top: 16px;
+    }
+
+    .mode-row button {
+      min-height: 48px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      color: var(--muted);
+      background: rgba(5, 12, 24, .85);
+      font: 700 11px/1 var(--mono);
+      letter-spacing: .08em;
+    }
+
+    .mode-row button[aria-pressed="true"] {
+      color: var(--cyan);
+      border-color: rgba(65, 232, 255, .55);
+      background: rgba(65, 232, 255, .07);
+    }
+
+    .truth-box {
+      margin-top: 14px;
+      padding: 14px;
+      border: 1px solid rgba(255, 207, 92, .22);
+      border-radius: 14px;
+      color: #e6d5a8;
+      background: rgba(255, 207, 92, .045);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .challenge-console {
+      padding: 18px;
+      border: 1px solid rgba(189, 109, 255, .2);
+      border-radius: 18px;
+      background:
+        radial-gradient(circle at 90% 0%, rgba(189, 109, 255, .12), transparent 45%),
+        rgba(3, 7, 16, .82);
+    }
+
+    .challenge-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .challenge-title strong {
+      font-size: clamp(25px, 5vw, 42px);
+      letter-spacing: -.04em;
+    }
+
+    .challenge-title span {
+      color: var(--violet);
+      font: 700 10px/1.4 var(--mono);
+      letter-spacing: .12em;
+      text-align: right;
+    }
+
+    .challenge-console p {
+      max-width: 720px;
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    .challenge-output {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .challenge-output div {
+      min-height: 86px;
+      padding: 12px;
+      border: 1px solid rgba(113, 219, 255, .11);
+      border-radius: 13px;
+      background: rgba(2, 7, 14, .8);
+    }
+
+    .challenge-output small {
+      display: block;
+      color: var(--dim);
+      font: 700 9px/1.35 var(--mono);
+      letter-spacing: .09em;
+    }
+
+    .challenge-output b {
+      display: block;
+      margin-top: 12px;
+      color: var(--ink);
+      font: 800 clamp(16px, 4vw, 24px)/1 var(--mono);
+    }
+
+    .challenge-output b.pass { color: var(--green); }
+
+    .verdict-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .verdict-card {
+      padding: 17px;
+      border: 1px solid rgba(113, 219, 255, .12);
+      border-radius: 17px;
+      background: rgba(3, 8, 17, .74);
+    }
+
+    .verdict-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .verdict-top span:first-child {
+      color: var(--muted);
+      font: 700 10px/1.35 var(--mono);
+      letter-spacing: .1em;
+    }
+
+    .verdict {
+      padding: 7px 9px;
+      border-radius: 999px;
+      font: 800 10px/1 var(--mono);
+      letter-spacing: .07em;
+      white-space: nowrap;
+    }
+
+    .verdict.act {
+      color: var(--green);
+      border: 1px solid rgba(83, 245, 165, .28);
+      background: rgba(83, 245, 165, .07);
+    }
+
+    .verdict.silence {
+      color: var(--gold);
+      border: 1px solid rgba(255, 207, 92, .28);
+      background: rgba(255, 207, 92, .07);
+    }
+
+    .verdict.reject {
+      color: var(--red);
+      border: 1px solid rgba(255, 91, 125, .3);
+      background: rgba(255, 91, 125, .08);
+    }
+
+    .verdict-card blockquote {
+      margin: 14px 0 7px;
+      color: var(--ink);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .reason {
+      color: var(--dim);
+      font: 11px/1.45 var(--mono);
+    }
+
+    .checklist {
+      display: grid;
+      gap: 8px;
+      margin: 16px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .checklist li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 42px;
+      gap: 12px;
+      padding: 9px 12px;
+      border-bottom: 1px solid rgba(113, 219, 255, .1);
+      color: var(--muted);
+      font: 11px/1.35 var(--mono);
+    }
+
+    .status {
+      color: var(--gold);
+      font-weight: 800;
+    }
+
+    .status.pass { color: var(--green); }
+    .status.fail { color: var(--red); }
+
+    .hash-box {
+      min-height: 64px;
+      margin-top: 15px;
+      padding: 13px;
+      overflow-wrap: anywhere;
+      border: 1px solid rgba(113, 219, 255, .14);
+      border-radius: 13px;
+      color: #9eddf0;
+      background: rgba(1, 5, 12, .78);
+      font: 10px/1.55 var(--mono);
+    }
+
+    .integrity-note {
+      margin: 12px 0 0;
+      color: var(--dim);
+      font-size: 11px;
+      line-height: 1.55;
+    }
+
+    footer {
+      padding: 10px 0 32px;
+      color: var(--dim);
+      text-align: center;
+      font: 10px/1.65 var(--mono);
+      letter-spacing: .08em;
+    }
+
+    .dock {
+      position: fixed;
+      z-index: 30;
+      left: 50%;
+      bottom: calc(12px + env(safe-area-inset-bottom));
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      width: min(440px, calc(100% - 28px));
+      padding: 5px;
+      transform: translateX(-50%);
+      border: 1px solid rgba(113, 219, 255, .2);
+      border-radius: 18px;
+      background: rgba(3, 7, 14, .88);
+      box-shadow: 0 12px 50px rgba(0, 0, 0, .55);
+      backdrop-filter: blur(18px);
+    }
+
+    .dock a {
+      display: grid;
+      min-height: 48px;
+      place-items: center;
+      border-radius: 13px;
+      color: var(--muted);
+      text-decoration: none;
+      font: 700 10px/1 var(--mono);
+      letter-spacing: .06em;
+    }
+
+    .dock a:hover, .dock a:focus-visible {
+      color: var(--cyan);
+      background: rgba(65, 232, 255, .07);
+    }
+
+    #toast {
+      position: fixed;
+      z-index: 40;
+      left: 50%;
+      bottom: calc(82px + env(safe-area-inset-bottom));
+      max-width: calc(100% - 36px);
+      padding: 12px 15px;
+      transform: translate(-50%, 18px);
+      border: 1px solid rgba(65, 232, 255, .28);
+      border-radius: 13px;
+      color: var(--ink);
+      background: rgba(4, 11, 21, .96);
+      box-shadow: 0 18px 50px rgba(0,0,0,.5);
+      font: 11px/1.45 var(--mono);
+      opacity: 0;
+      pointer-events: none;
+      transition: .22s ease;
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    @media (min-width: 820px) {
+      .shell { width: min(1120px, calc(100% - 48px)); }
+      .two-col { grid-template-columns: 1.06fr .94fr; }
+      .metrics-grid { grid-template-columns: repeat(4, 1fr); }
+      .verdict-grid { grid-template-columns: 1fr 1fr; }
+      .panel-head, .control-zone { padding-left: 28px; padding-right: 28px; }
+      .segmented { margin-left: 28px; }
+      .canvas-wrap { margin-left: 18px; margin-right: 18px; }
+    }
+
+    @media (max-width: 520px) {
+      .shell { width: min(100% - 18px, 1120px); }
+      .hero-copy { padding-top: 42px; }
+      .runtime { padding: 0 9px; font-size: 9px; }
+      .brand { letter-spacing: .12em; }
+      .panel-head { padding: 18px 17px 0; }
+      .segmented { margin-left: 17px; margin-right: 17px; }
+      .control-zone { padding-left: 17px; padding-right: 17px; }
+      .metrics-grid { padding-left: 12px; padding-right: 12px; }
+      .metric { min-height: 116px; padding: 13px; }
+      .challenge-output { grid-template-columns: 1fr; }
+      .challenge-output div { min-height: 68px; }
+      .formula { max-width: 100%; }
+      .live-dot { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      #toast { transition: none; }
+      .noise { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="noise" aria-hidden="true"></div>
+
+  <header class="shell">
+    <div class="brand-row">
+      <div class="brand"><span class="mark" aria-hidden="true">◈</span><span>NEON AI</span></div>
+      <div class="runtime" id="runtimeStatus">RUNTIME EGRESS: 0</div>
+    </div>
+
+    <div class="hero-copy">
+      <div class="kicker">Relativity instrument · local-first</div>
+      <h1><span>LIGHTFRAME</span></h1>
+      <p>Zmień obserwatora. Zmień czas, długość i barwę. Nie zmienisz lokalnie zmierzonej prędkości światła.</p>
+      <span class="hero-rule">CZŁOWIEK + AI · RAZEM BADAMY NIEZMIENNIKI</span>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="panel" id="experiment" aria-labelledby="experimentTitle">
+      <div class="panel-head">
+        <div>
+          <div class="section-kicker">Eksperyment 01 · niezmiennik</div>
+          <h2 id="experimentTitle">Światło nie negocjuje</h2>
+          <p>Porównaj opis laboratoryjny z układem poruszającego się obserwatora. Obiekty zmieniają ruch względny; lokalny pomiar światła pozostaje równy c.</p>
+        </div>
+        <span class="index">01 / 05</span>
+      </div>
+
+      <div class="segmented" role="group" aria-label="Wybór układu odniesienia">
+        <button id="labFrameButton" type="button" aria-pressed="true">LABORATORIUM</button>
+        <button id="observerFrameButton" type="button" aria-pressed="false">OBSERWATOR</button>
+      </div>
+
+      <div class="canvas-wrap">
+        <canvas id="lightScene" role="img" aria-label="Animowana ilustracja źródła, obserwatora i impulsu światła"></canvas>
+        <div class="scene-overlay">
+          <div class="formula">u′ = (u − v) / (1 − uv/c²) · dla u = ±c otrzymujemy u′ = ±c</div>
+          <div class="live-dot">MODEL LIVE</div>
+        </div>
+      </div>
+
+      <div class="control-zone">
+        <div class="velocity-line">
+          <label for="velocity">Prędkość obserwatora β = v/c</label>
+          <output class="velocity-value" id="velocityValue" for="velocity">−0.30</output>
+        </div>
+        <input id="velocity" type="range" min="-0.95" max="0.95" step="0.01" value="-0.30" aria-describedby="velocityHelp">
+        <div class="scale-labels" aria-hidden="true"><span>−0.95c · oddala się</span><span>0</span><span>+0.95c · zbliża się</span></div>
+        <div class="quick-row">
+          <button class="chip active" type="button" data-beta="-0.30">−0.30c</button>
+          <button class="chip" type="button" data-beta="0">SPOCZYNEK</button>
+          <button class="chip" type="button" data-beta="0.80">+0.80c</button>
+          <button class="chip" id="pauseButton" type="button">WSTRZYMAJ CZAS</button>
+          <button class="chip" id="resetButton" type="button">RESET</button>
+        </div>
+        <p class="science-note" id="velocityHelp"><strong>Uwaga naukowa:</strong> fioletowa sinusoida przedstawia wartość pola E(x,t), a nie falisty tor fotonu. Dodatnie β oznacza ruch obserwatora w stronę źródła po prawej.</p>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="metricsTitle">
+      <div class="panel-head">
+        <div>
+          <div class="section-kicker">Soczewka Lorentza · wartości lokalne</div>
+          <h2 id="metricsTitle">Co się zmienia?</h2>
+        </div>
+        <span class="index">02 / 05</span>
+      </div>
+      <div class="metrics-grid">
+        <div class="metric">
+          <span class="label">Pomiar światła c′</span>
+          <strong class="number cyan" id="lightSpeedMetric">1.000c</strong>
+          <small>niezmiennik lokalnego pomiaru</small>
+        </div>
+        <div class="metric">
+          <span class="label">Współczynnik γ</span>
+          <strong class="number" id="gammaMetric">1.048</strong>
+          <small>dylatacja czasu względem laboratorium</small>
+        </div>
+        <div class="metric">
+          <span class="label">Czas własny Δτ/Δt</span>
+          <strong class="number violet" id="properTimeMetric">0.954</strong>
+          <small>tempo zegara obserwatora</small>
+        </div>
+        <div class="metric">
+          <span class="label">Doppler z prawej D</span>
+          <strong class="number gold" id="dopplerMetric">0.734</strong>
+          <small id="dopplerDescription">przesunięcie ku czerwieni</small>
+        </div>
+      </div>
+    </section>
+
+    <div class="two-col">
+      <section class="panel" id="spacetime" aria-labelledby="coneTitle">
+        <div class="panel-head">
+          <div>
+            <div class="section-kicker">Mapa przyczynowości</div>
+            <h2 id="coneTitle">Stożek świetlny</h2>
+            <p>Światło wyznacza granicę wpływu. Linia świata obserwatora przechyla się, ale promienie światła pozostają na krawędzi stożka.</p>
+          </div>
+          <span class="index">03</span>
+        </div>
+        <div class="cone-body">
+          <canvas id="coneCanvas" role="img" aria-label="Diagram czasoprzestrzenny ze stożkiem świetlnym i linią świata obserwatora"></canvas>
+          <div class="legend" aria-hidden="true">
+            <span style="color:var(--cyan)"><i class="swatch"></i>światło ±c</span>
+            <span style="color:var(--gold)"><i class="swatch"></i>linia świata</span>
+            <span style="color:var(--violet)"><i class="swatch"></i>równoczesność t′=0</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="lensTitle">
+        <div class="panel-head">
+          <div>
+            <div class="section-kicker">Lupa kwantowa · model</div>
+            <h2 id="lensTitle">Pole czy detekcja?</h2>
+            <p>Dwa różne obrazy, których nie należy mieszać: profil pola oraz schemat prawdopodobieństwa detekcji pojedynczego kwantu.</p>
+          </div>
+          <span class="index">04</span>
+        </div>
+        <div class="lens-body">
+          <div class="lens-stage">
+            <canvas id="lensCanvas" role="img" aria-label="Model profilu pola elektromagnetycznego lub prawdopodobieństwa detekcji"></canvas>
+          </div>
+          <div class="mode-row" role="group" aria-label="Tryb lupy">
+            <button id="fieldModeButton" type="button" aria-pressed="true">PROFIL POLA E / B</button>
+            <button id="photonModeButton" type="button" aria-pressed="false">DETEKCJA KWANTU</button>
+          </div>
+          <div class="action-row">
+            <button class="action" id="measureButton" type="button" disabled>SYMULUJ DETEKCJĘ</button>
+          </div>
+          <div class="truth-box" id="lensTruth">Pole jest rysowane jako funkcja położenia i czasu. Linia nie jest trajektorią fotonu.</div>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel" id="challenge" aria-labelledby="challengeTitle">
+      <div class="panel-head">
+        <div>
+          <div class="section-kicker">ASTRA challenge · test implementacji</div>
+          <h2 id="challengeTitle">10 000 prób złamania c</h2>
+          <p>Telefon przeliczy transformację prędkości światła dla 10 000 różnych prędkości obserwatora. To prawdziwy test numeryczny kodu — nie eksperyment fizyczny.</p>
+        </div>
+        <span class="index">04.5</span>
+      </div>
+      <div class="challenge-body">
+        <div class="challenge-console">
+          <div class="challenge-title">
+            <strong id="challengeHeadline">GOTOWY</strong>
+            <span>β ∈ (−0.999, +0.999)<br>TOLERANCJA 1e−12</span>
+          </div>
+          <p>Każda próba transformuje promień biegnący w lewo i w prawo. Naruszenie zostaje zapisane, gdy | |u′| − c | przekroczy tolerancję.</p>
+          <button class="action gold" id="challengeButton" type="button">URUCHOM 10 000 PRÓB</button>
+          <div class="challenge-output" aria-live="polite">
+            <div><small>PRÓBY</small><b id="challengeSamples">—</b></div>
+            <div><small>NARUSZENIA</small><b id="challengeBreaches">—</b></div>
+            <div><small>MAX BŁĄD</small><b id="challengeError">—</b></div>
+          </div>
+          <p class="integrity-note">Wynik potwierdza zgodność implementacji z użytym równaniem w badanej siatce. Nie stanowi samodzielnego dowodu szczególnej teorii względności.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="proof" aria-labelledby="proofTitle">
+      <div class="panel-head">
+        <div>
+          <div class="section-kicker">Proof-of-Silence™ · granica twierdzenia</div>
+          <h2 id="proofTitle">Co wolno powiedzieć?</h2>
+          <p>Ten sam ekran rozdziela prawidłowy wniosek z modelu od twierdzenia, którego telefon nie zmierzył.</p>
+        </div>
+        <span class="index">05 / 05</span>
+      </div>
+      <div class="gate-body">
+        <div class="verdict-grid">
+          <article class="verdict-card">
+            <div class="verdict-top">
+              <span>TWIERDZENIE MODELOWE</span>
+              <span class="verdict act" id="modelVerdict">ACT NOW</span>
+            </div>
+            <blockquote>„Transformacja Lorentza zachowuje lokalną wartość prędkości światła równą c.”</blockquote>
+            <div class="reason" id="modelReason">MATH_SELF_TEST_PASS</div>
+          </article>
+          <article class="verdict-card">
+            <div class="verdict-top">
+              <span>TWIERDZENIE FIZYCZNE</span>
+              <span class="verdict silence">SILENCE</span>
+            </div>
+            <blockquote>„Ten telefon przeprowadził fizyczny pomiar prędkości światła.”</blockquote>
+            <div class="reason">NO_SENSOR_EVIDENCE · SIMULATION_ONLY</div>
+          </article>
+        </div>
+
+        <ul class="checklist" aria-label="Kontrole dowodowe">
+          <li><span>LORENTZ_DOMAIN · |β| &lt; 1</span><b class="status pass">PASS</b></li>
+          <li><span>FRAME_PARITY · u′ = ±c</span><b class="status" id="parityStatus">PENDING</b></li>
+          <li><span>SHA-256 SELF TEST · abc</span><b class="status" id="hashSelfTestStatus">PENDING</b></li>
+          <li><span>ASTRA 10K GRID</span><b class="status" id="challengeStatus">OPTIONAL</b></li>
+          <li><span>EXTERNAL PHYSICAL MEASUREMENT</span><b class="status">MISSING</b></li>
+          <li><span>LOCAL RECORD INTEGRITY</span><b class="status" id="recordStatus">OPEN</b></li>
+        </ul>
+
+        <div class="action-row">
+          <button class="action primary" id="sealButton" type="button">ZAMKNIJ REKORD SHA-256</button>
+          <button class="action" id="verifyButton" type="button" disabled>ZWERYFIKUJ LOKALNIE</button>
+          <button class="action" id="exportButton" type="button" disabled>EKSPORTUJ JSON</button>
+        </div>
+
+        <div class="hash-box" id="hashBox" aria-live="polite">RECORD_HASH: —</div>
+        <p class="integrity-note"><strong>NIEPODPISANY REKORD LOKALNY.</strong> Hash wykrywa zmianę danych po zamknięciu. Nie dowodzi prawdziwości fizycznej, autorstwa, czasu powstania ani tożsamości operatora.</p>
+      </div>
+    </section>
+
+    <footer>
+      NEON LIGHTFRAME v1.0 · EDUCATIONAL SIMULATION · NO NETWORK CALLS<br>
+      Proof-of-Silence™ · NO PROOF → NO ACTION · neonai.shop
+    </footer>
+  </main>
+
+  <nav class="dock" aria-label="Nawigacja sekcji">
+    <a href="#experiment">01 · ŚWIATŁO</a>
+    <a href="#spacetime">02 · CZAS</a>
+    <a href="#proof">03 · DOWÓD</a>
+  </nav>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    "use strict";
+
+    var state = {
+      beta: -0.30,
+      frame: "lab",
+      lensMode: "field",
+      paused: window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+      simTime: 0,
+      lastFrame: performance.now(),
+      detection: null,
+      selfTestPass: false,
+      challenge: null,
+      sealed: null,
+      verified: false
+    };
+
+    var ui = {
+      velocity: document.getElementById("velocity"),
+      velocityValue: document.getElementById("velocityValue"),
+      labFrameButton: document.getElementById("labFrameButton"),
+      observerFrameButton: document.getElementById("observerFrameButton"),
+      pauseButton: document.getElementById("pauseButton"),
+      resetButton: document.getElementById("resetButton"),
+      lightSpeedMetric: document.getElementById("lightSpeedMetric"),
+      gammaMetric: document.getElementById("gammaMetric"),
+      properTimeMetric: document.getElementById("properTimeMetric"),
+      dopplerMetric: document.getElementById("dopplerMetric"),
+      dopplerDescription: document.getElementById("dopplerDescription"),
+      lightScene: document.getElementById("lightScene"),
+      coneCanvas: document.getElementById("coneCanvas"),
+      lensCanvas: document.getElementById("lensCanvas"),
+      fieldModeButton: document.getElementById("fieldModeButton"),
+      photonModeButton: document.getElementById("photonModeButton"),
+      measureButton: document.getElementById("measureButton"),
+      lensTruth: document.getElementById("lensTruth"),
+      challengeButton: document.getElementById("challengeButton"),
+      challengeHeadline: document.getElementById("challengeHeadline"),
+      challengeSamples: document.getElementById("challengeSamples"),
+      challengeBreaches: document.getElementById("challengeBreaches"),
+      challengeError: document.getElementById("challengeError"),
+      challengeStatus: document.getElementById("challengeStatus"),
+      parityStatus: document.getElementById("parityStatus"),
+      hashSelfTestStatus: document.getElementById("hashSelfTestStatus"),
+      modelVerdict: document.getElementById("modelVerdict"),
+      modelReason: document.getElementById("modelReason"),
+      sealButton: document.getElementById("sealButton"),
+      verifyButton: document.getElementById("verifyButton"),
+      exportButton: document.getElementById("exportButton"),
+      recordStatus: document.getElementById("recordStatus"),
+      hashBox: document.getElementById("hashBox"),
+      runtimeStatus: document.getElementById("runtimeStatus"),
+      toast: document.getElementById("toast")
+    };
+
+    var K256 = new Uint32Array([
+      0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+      0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+      0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+      0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+      0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+      0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+      0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+      0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
+    ]);
+
+    function rotr(value, bits) {
+      return (value >>> bits) | (value << (32 - bits));
+    }
+
+    function sha256Fallback(bytes) {
+      var bitLength = bytes.length * 8;
+      var paddedLength = Math.ceil((bytes.length + 9) / 64) * 64;
+      var padded = new Uint8Array(paddedLength);
+      var view = new DataView(padded.buffer);
+      var words = new Uint32Array(64);
+      var hash = new Uint32Array([
+        0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,
+        0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19
+      ]);
+
+      padded.set(bytes);
+      padded[bytes.length] = 0x80;
+      view.setUint32(paddedLength - 8, Math.floor(bitLength / 0x100000000), false);
+      view.setUint32(paddedLength - 4, bitLength >>> 0, false);
+
+      for (var offset = 0; offset < paddedLength; offset += 64) {
+        var i;
+        for (i = 0; i < 16; i += 1) {
+          words[i] = view.getUint32(offset + i * 4, false);
+        }
+        for (i = 16; i < 64; i += 1) {
+          var s0 = rotr(words[i - 15], 7) ^ rotr(words[i - 15], 18) ^ (words[i - 15] >>> 3);
+          var s1 = rotr(words[i - 2], 17) ^ rotr(words[i - 2], 19) ^ (words[i - 2] >>> 10);
+          words[i] = (words[i - 16] + s0 + words[i - 7] + s1) >>> 0;
+        }
+
+        var a = hash[0];
+        var b = hash[1];
+        var c = hash[2];
+        var d = hash[3];
+        var e = hash[4];
+        var f = hash[5];
+        var g = hash[6];
+        var h = hash[7];
+
+        for (i = 0; i < 64; i += 1) {
+          var sum1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
+          var choose = (e & f) ^ (~e & g);
+          var temp1 = (h + sum1 + choose + K256[i] + words[i]) >>> 0;
+          var sum0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
+          var majority = (a & b) ^ (a & c) ^ (b & c);
+          var temp2 = (sum0 + majority) >>> 0;
+
+          h = g;
+          g = f;
+          f = e;
+          e = (d + temp1) >>> 0;
+          d = c;
+          c = b;
+          b = a;
+          a = (temp1 + temp2) >>> 0;
+        }
+
+        hash[0] = (hash[0] + a) >>> 0;
+        hash[1] = (hash[1] + b) >>> 0;
+        hash[2] = (hash[2] + c) >>> 0;
+        hash[3] = (hash[3] + d) >>> 0;
+        hash[4] = (hash[4] + e) >>> 0;
+        hash[5] = (hash[5] + f) >>> 0;
+        hash[6] = (hash[6] + g) >>> 0;
+        hash[7] = (hash[7] + h) >>> 0;
+      }
+
+      return Array.from(hash).map(function (word) {
+        return word.toString(16).padStart(8, "0");
+      }).join("");
+    }
+
+    async function sha256Hex(text) {
+      var bytes = new TextEncoder().encode(text);
+      try {
+        if (globalThis.crypto && globalThis.crypto.subtle) {
+          var digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+          return Array.from(new Uint8Array(digest)).map(function (byte) {
+            return byte.toString(16).padStart(2, "0");
+          }).join("");
+        }
+      } catch (error) {
+        /* A file URL or restricted browser may deny SubtleCrypto; use the local fallback. */
+      }
+      return sha256Fallback(bytes);
+    }
+
+    function canonicalize(value) {
+      if (value === null) return "null";
+      if (typeof value === "string" || typeof value === "boolean") return JSON.stringify(value);
+      if (typeof value === "number") {
+        if (!Number.isFinite(value)) throw new TypeError("NON_FINITE_NUMBER");
+        return Object.is(value, -0) ? "0" : JSON.stringify(value);
+      }
+      if (Array.isArray(value)) {
+        return "[" + value.map(canonicalize).join(",") + "]";
+      }
+      if (typeof value === "object") {
+        return "{" + Object.keys(value).sort().map(function (key) {
+          return JSON.stringify(key) + ":" + canonicalize(value[key]);
+        }).join(",") + "}";
+      }
+      throw new TypeError("UNSUPPORTED_VALUE");
+    }
+
+    function derive(beta) {
+      var gamma = 1 / Math.sqrt(1 - beta * beta);
+      var leftLight = (-1 - beta) / (1 + beta);
+      var rightLight = (1 - beta) / (1 - beta);
+      return {
+        gamma: gamma,
+        properTimeRatio: 1 / gamma,
+        lengthRatio: 1 / gamma,
+        transformedLeftLight: leftLight,
+        transformedRightLight: rightLight,
+        dopplerIncomingFromRight: gamma * (1 + beta)
+      };
+    }
+
+    function signed(value, digits) {
+      if (Math.abs(value) < Math.pow(10, -digits) / 2) return "0." + "0".repeat(digits);
+      return (value < 0 ? "−" : "+") + Math.abs(value).toFixed(digits);
+    }
+
+    function haptic() {
+      if (navigator.vibrate) navigator.vibrate(8);
+    }
+
+    var toastTimer = 0;
+    function showToast(message) {
+      clearTimeout(toastTimer);
+      ui.toast.textContent = message;
+      ui.toast.classList.add("show");
+      toastTimer = setTimeout(function () {
+        ui.toast.classList.remove("show");
+      }, 2400);
+    }
+
+    function setStatus(element, text, kind) {
+      element.textContent = text;
+      element.classList.remove("pass", "fail");
+      if (kind) element.classList.add(kind);
+    }
+
+    function invalidateRecord() {
+      state.sealed = null;
+      state.verified = false;
+      ui.verifyButton.disabled = true;
+      ui.exportButton.disabled = true;
+      setStatus(ui.recordStatus, "OPEN", "");
+      ui.hashBox.textContent = "RECORD_HASH: —";
+    }
+
+    function updateQuickButtons() {
+      document.querySelectorAll("[data-beta]").forEach(function (button) {
+        button.classList.toggle("active", Math.abs(Number(button.dataset.beta) - state.beta) < 0.0001);
+      });
+    }
+
+    function updateReadouts() {
+      var values = derive(state.beta);
+      ui.velocityValue.textContent = signed(state.beta, 2);
+      ui.lightSpeedMetric.textContent = "1.000c";
+      ui.gammaMetric.textContent = values.gamma.toFixed(3);
+      ui.properTimeMetric.textContent = values.properTimeRatio.toFixed(3);
+      ui.dopplerMetric.textContent = values.dopplerIncomingFromRight.toFixed(3);
+
+      if (Math.abs(values.dopplerIncomingFromRight - 1) < 0.001) {
+        ui.dopplerDescription.textContent = "brak przesunięcia";
+      } else if (values.dopplerIncomingFromRight > 1) {
+        ui.dopplerDescription.textContent = "przesunięcie ku błękitowi";
+      } else {
+        ui.dopplerDescription.textContent = "przesunięcie ku czerwieni";
+      }
+
+      ui.labFrameButton.setAttribute("aria-pressed", String(state.frame === "lab"));
+      ui.observerFrameButton.setAttribute("aria-pressed", String(state.frame === "observer"));
+      ui.fieldModeButton.setAttribute("aria-pressed", String(state.lensMode === "field"));
+      ui.photonModeButton.setAttribute("aria-pressed", String(state.lensMode === "photon"));
+      ui.measureButton.disabled = state.lensMode !== "photon";
+      ui.pauseButton.textContent = state.paused ? "WZNÓW CZAS" : "WSTRZYMAJ CZAS";
+      updateQuickButtons();
+    }
+
+    function surface(canvas) {
+      var rect = canvas.getBoundingClientRect();
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      var pixelWidth = Math.max(1, Math.round(rect.width * dpr));
+      var pixelHeight = Math.max(1, Math.round(rect.height * dpr));
+      if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+        canvas.width = pixelWidth;
+        canvas.height = pixelHeight;
+      }
+      var context = canvas.getContext("2d");
+      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return { ctx: context, width: rect.width, height: rect.height };
+    }
+
+    function roundedRect(ctx, x, y, width, height, radius) {
+      var r = Math.min(radius, width / 2, height / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + width, y, x + width, y + height, r);
+      ctx.arcTo(x + width, y + height, x, y + height, r);
+      ctx.arcTo(x, y + height, x, y, r);
+      ctx.arcTo(x, y, x + width, y, r);
+      ctx.closePath();
+    }
+
+    function drawGrid(ctx, width, height, spacing) {
+      ctx.save();
+      ctx.strokeStyle = "rgba(113,219,255,.055)";
+      ctx.lineWidth = 1;
+      for (var x = 0; x <= width; x += spacing) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+      for (var y = 0; y <= height; y += spacing) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function glowDot(ctx, x, y, radius, color) {
+      ctx.save();
+      ctx.shadowColor = color;
+      ctx.shadowBlur = radius * 3;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawArrow(ctx, x, y, direction, color) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(direction, 1);
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-18, 0);
+      ctx.lineTo(18, 0);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(18, 0);
+      ctx.lineTo(9, -6);
+      ctx.lineTo(9, 6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawScene() {
+      var s = surface(ui.lightScene);
+      var ctx = s.ctx;
+      var width = s.width;
+      var height = s.height;
+      ctx.clearRect(0, 0, width, height);
+
+      var backdrop = ctx.createRadialGradient(width * .72, height * .42, 10, width * .72, height * .42, width * .72);
+      backdrop.addColorStop(0, "rgba(16,55,105,.24)");
+      backdrop.addColorStop(.48, "rgba(7,17,38,.45)");
+      backdrop.addColorStop(1, "rgba(2,5,12,1)");
+      ctx.fillStyle = backdrop;
+      ctx.fillRect(0, 0, width, height);
+      drawGrid(ctx, width, height, Math.max(34, width / 14));
+
+      var y = height * .55;
+      var worldScale = width * .38;
+      var worldToX = function (worldX) { return width / 2 + worldX * worldScale; };
+      var cycle = 2.62;
+      var t = state.simTime % cycle;
+      var cRate = .50;
+      var sourceWorld;
+      var observerWorld;
+      var photonWorld = .72 - cRate * t;
+
+      if (state.frame === "lab") {
+        sourceWorld = .72;
+        observerWorld = -.62 + state.beta * cRate * t;
+      } else {
+        observerWorld = -.62;
+        sourceWorld = .72 - state.beta * cRate * t;
+      }
+
+      var sourceX = worldToX(sourceWorld);
+      var observerX = worldToX(observerWorld);
+      var photonX = worldToX(photonWorld);
+      var midpointX = (sourceX + observerX) / 2;
+
+      ctx.save();
+      ctx.strokeStyle = "rgba(154,181,211,.18)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(16, y);
+      ctx.lineTo(width - 16, y);
+      ctx.stroke();
+
+      ctx.setLineDash([6, 8]);
+      ctx.strokeStyle = "rgba(255,207,92,.55)";
+      ctx.beginPath();
+      ctx.moveTo(midpointX, 45);
+      ctx.lineTo(midpointX, height - 52);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "rgba(255,207,92,.75)";
+      ctx.font = "700 10px " + getComputedStyle(document.documentElement).getPropertyValue("--mono");
+      ctx.textAlign = "center";
+      ctx.fillText("LOKALNE TERAZ", midpointX, 32);
+      ctx.restore();
+
+      ctx.save();
+      ctx.beginPath();
+      for (var px = 18; px < width - 18; px += 3) {
+        var amplitude = 14 * Math.sin((px / Math.max(width, 1)) * Math.PI * 7 - state.simTime * 4.2);
+        var py = y + amplitude;
+        if (px === 18) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.strokeStyle = "rgba(189,109,255,.66)";
+      ctx.lineWidth = 2;
+      ctx.shadowColor = "#bd6dff";
+      ctx.shadowBlur = 10;
+      ctx.stroke();
+      ctx.restore();
+
+      if (photonX > -30 && photonX < width + 30) {
+        ctx.save();
+        var trail = ctx.createLinearGradient(photonX, y, photonX + 62, y);
+        trail.addColorStop(0, "rgba(65,232,255,.62)");
+        trail.addColorStop(1, "rgba(65,232,255,0)");
+        ctx.strokeStyle = trail;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(photonX, y);
+        ctx.lineTo(photonX + 62, y);
+        ctx.stroke();
+        ctx.restore();
+        glowDot(ctx, photonX, y, 5.5, "#41e8ff");
+      }
+
+      if (sourceX > -60 && sourceX < width + 60) {
+        ctx.save();
+        var sourceGradient = ctx.createRadialGradient(sourceX - 8, y - 9, 2, sourceX, y, 34);
+        sourceGradient.addColorStop(0, "#fff7ce");
+        sourceGradient.addColorStop(.38, "#ffdb6c");
+        sourceGradient.addColorStop(1, "#ffae35");
+        ctx.shadowColor = "#ffcf5c";
+        ctx.shadowBlur = 28;
+        ctx.fillStyle = sourceGradient;
+        ctx.beginPath();
+        ctx.arc(sourceX, y, 27, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        ctx.fillStyle = "rgba(255,207,92,.83)";
+        ctx.font = "700 10px " + getComputedStyle(document.documentElement).getPropertyValue("--mono");
+        ctx.textAlign = "center";
+        ctx.fillText("ŹRÓDŁO", sourceX, y + 49);
+      }
+
+      if (observerX > -70 && observerX < width + 70) {
+        ctx.save();
+        ctx.translate(observerX, y);
+        ctx.strokeStyle = "#eef8ff";
+        ctx.lineWidth = 2;
+        ctx.shadowColor = "#41e8ff";
+        ctx.shadowBlur = 13;
+        ctx.beginPath();
+        ctx.arc(0, 0, 18, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(65,232,255,.7)";
+        ctx.beginPath();
+        ctx.arc(0, 0, 27, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = "#eef8ff";
+        ctx.beginPath();
+        ctx.moveTo(0, -6);
+        ctx.lineTo(6, 7);
+        ctx.lineTo(-6, 7);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        var apparentVelocity = state.frame === "lab" ? state.beta : 0;
+        if (Math.abs(apparentVelocity) > .005) {
+          drawArrow(ctx, observerX, y - 48, apparentVelocity > 0 ? 1 : -1, "#ff5b7d");
+        }
+        ctx.fillStyle = "rgba(220,236,248,.9)";
+        ctx.font = "700 10px " + getComputedStyle(document.documentElement).getPropertyValue("--mono");
+        ctx.textAlign = "center";
+        ctx.fillText("OBSERWATOR", observerX, y + 49);
+      }
+
+      ctx.fillStyle = "rgba(157,176,199,.72)";
+      ctx.font = "700 10px " + getComputedStyle(document.documentElement).getPropertyValue("--mono");
+      ctx.textAlign = "left";
+      ctx.fillText(state.frame === "lab" ? "FRAME · LABORATORIUM" : "FRAME · OBSERWATOR", 18, 22);
+      ctx.fillStyle = "rgba(189,109,255,.75)";
+      ctx.fillText("E(x,t) · PROFIL POLA, NIE TOR FOTONU", 18, height - 20);
+    }
+
+    function drawCone() {
+      var s = surface(ui.coneCanvas);
+      var ctx = s.ctx;
+      var width = s.width;
+      var height = s.height;
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = "#030711";
+      ctx.fillRect(0, 0, width, height);
+      drawGrid(ctx, width, height, Math.max(28, width / 12));
+
+      var originX = width / 2;
+      var originY = height - 34;
+      var scale = Math.min(width * .42, height * .78);
+      var topT = .88;
+
+      ctx.save();
+      ctx.fillStyle = "rgba(65,232,255,.035)";
+      ctx.beginPath();
+      ctx.moveTo(originX, originY);
+      ctx.lineTo(originX - topT * scale, originY - topT * scale);
+      ctx.lineTo(originX + topT * scale, originY - topT * scale);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(65,232,255,.95)";
+      ctx.lineWidth = 2;
+      ctx.shadowColor = "#41e8ff";
+      ctx.shadowBlur = 9;
+      [-1, 1].forEach(function (direction) {
+        ctx.beginPath();
+        ctx.moveTo(originX, originY);
+        ctx.lineTo(originX + direction * topT * scale, originY - topT * scale);
+        ctx.stroke();
+      });
+      ctx.restore();
+
+      ctx.save();
+      ctx.strokeStyle = "rgba(255,255,255,.28)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(18, originY);
+      ctx.lineTo(width - 18, originY);
+      ctx.moveTo(originX, height - 12);
+      ctx.lineTo(originX, 16);
+      ctx.stroke();
+      ctx.fillStyle = "rgba(157,176,199,.82)";
+      ctx.font = "10px " + getComputedStyle(document.documentElement).getPropertyValue("--mono");
+      ctx.fillText("x", width - 24, originY - 8);
+      ctx.fillText("ct", originX + 8, 24);
+      ctx.restore();
+
+      var displayedBeta = state.frame === "lab" ? state.beta : -state.beta;
+      ctx.save();
+      ctx.strokeStyle = "#ffcf5c";
+      ctx.lineWidth = 2.4;
+      ctx.shadowColor = "#ffcf5c";
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.moveTo(originX, originY);
+      ctx.lineTo(originX + displayedBeta * topT * scale, originY - topT * scale);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.save();
+      ctx.strokeStyle = "rgba(189,109,255,.82)";
+      ctx.lineWidth = 1.7;
+      ctx.setLineDash([6, 5]);
+      var span = .75;
+      ctx.beginPath();
+      ctx.moveTo(originX - span * scale, originY + state.beta * span * scale);
+      ctx.lineTo(originX + span * scale, originY - state.beta * span * scale);
+      ctx.stroke();
+      ctx.restore();
+
+      var markerT = ((state.simTime % 2.5) / 2.5) * topT;
+      glowDot(ctx, originX + displayedBeta * markerT * scale, originY - markerT * scale, 4.5, "#ffcf5c");
+
+      ctx.fillStyle = "rgba(238,248,255,.82)";
+      ctx.font = "700 10px " + getComputedStyle(document.documentElement).getPropertyValue("--mono");
+      ctx.textAlign = "center";
+      ctx.fillText("ZDARZENIE", originX, originY + 22);
+      ctx.fillStyle = "rgba(65,232,255,.8)";
+      ctx.fillText("−c", originX - topT * scale + 10, originY - topT * scale - 8);
+      ctx.fillText("+c", originX + topT * scale - 10, originY - topT * scale - 8);
+    }
+
+    function lensClip(ctx, centerX, centerY, radius) {
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+      ctx.clip();
+    }
+
+    function drawLens() {
+      var s = surface(ui.lensCanvas);
+      var ctx = s.ctx;
+      var width = s.width;
+      var height = s.height;
+      ctx.clearRect(0, 0, width, height);
+
+      var cx = width / 2;
+      var cy = height / 2;
+      var radius = Math.min(width, height) * .455;
+
+      ctx.save();
+      lensClip(ctx, cx, cy, radius);
+      var gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+      gradient.addColorStop(0, "rgba(13,28,50,1)");
+      gradient.addColorStop(.7, "rgba(4,10,21,1)");
+      gradient.addColorStop(1, "rgba(1,4,10,1)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+      drawGrid(ctx, width, height, Math.max(24, width / 12));
+
+      if (state.lensMode === "field") {
+        var phase = state.simTime * 3.2;
+        [["#bd6dff", 0, 1], ["#41e8ff", Math.PI / 2, .62]].forEach(function (wave) {
+          ctx.save();
+          ctx.beginPath();
+          for (var x = cx - radius; x <= cx + radius; x += 2) {
+            var envelope = Math.pow(Math.max(0, 1 - Math.pow((x - cx) / radius, 2)), .4);
+            var y = cy + Math.sin((x - cx) / radius * Math.PI * 3 - phase + wave[1]) * radius * .25 * envelope * wave[2];
+            if (x === cx - radius) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          }
+          ctx.strokeStyle = wave[0];
+          ctx.lineWidth = 3;
+          ctx.shadowColor = wave[0];
+          ctx.shadowBlur = 14;
+          ctx.stroke();
+          ctx.restore();
+        });
+        ctx.fillStyle = "rgba(238,248,255,.7)";
+        ctx.font = "700 10px " + getComputedStyle(document.documentElement).getPropertyValue("--mono");
+        ctx.textAlign = "center";
+        ctx.fillText("E(x,t) / B(x,t) · PROFILE", cx, cy + radius * .67);
+      } else {
+        var packetCenter = cx + Math.sin(state.simTime * .8) * radius * .16;
+        var sigma = radius * .27;
+        var densityGradient = ctx.createRadialGradient(packetCenter, cy, 0, packetCenter, cy, radius * .72);
+        densityGradient.addColorStop(0, "rgba(65,232,255,.28)");
+        densityGradient.addColorStop(.4, "rgba(189,109,255,.12)");
+        densityGradient.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = densityGradient;
+        ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
+
+        ctx.save();
+        ctx.beginPath();
+        for (var px = cx - radius; px <= cx + radius; px += 2) {
+          var gaussian = Math.exp(-Math.pow(px - packetCenter, 2) / (2 * sigma * sigma));
+          var py = cy + radius * .42 - gaussian * radius * .7;
+          if (px === cx - radius) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = "#41e8ff";
+        ctx.lineWidth = 3;
+        ctx.shadowColor = "#41e8ff";
+        ctx.shadowBlur = 15;
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.strokeStyle = "rgba(238,248,255,.18)";
+        ctx.beginPath();
+        ctx.moveTo(cx - radius, cy + radius * .42);
+        ctx.lineTo(cx + radius, cy + radius * .42);
+        ctx.stroke();
+
+        if (state.detection) {
+          glowDot(ctx, state.detection.x * width, state.detection.y * height, 6.5, "#ffcf5c");
+          ctx.strokeStyle = "rgba(255,207,92,.48)";
+          ctx.beginPath();
+          ctx.arc(state.detection.x * width, state.detection.y * height, 16, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = "rgba(238,248,255,.7)";
+        ctx.font = "700 10px " + getComputedStyle(document.documentElement).getPropertyValue("--mono");
+        ctx.textAlign = "center";
+        ctx.fillText("SCHEMAT |ψ|² · PRAWDOPODOBIEŃSTWO DETEKCJI", cx, cy + radius * .7);
+      }
+      ctx.restore();
+
+      ctx.save();
+      ctx.strokeStyle = "#41e8ff";
+      ctx.lineWidth = Math.max(3, width * .009);
+      ctx.shadowColor = "#41e8ff";
+      ctx.shadowBlur = 17;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(189,109,255,.34)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius * .92, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function randomGaussian() {
+      var u = 0;
+      var v = 0;
+      while (u === 0) u = Math.random();
+      while (v === 0) v = Math.random();
+      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    }
+
+    function simulateDetection() {
+      if (state.lensMode !== "photon") return;
+      var x = Math.max(.16, Math.min(.84, .5 + randomGaussian() * .12));
+      var y = Math.max(.20, Math.min(.78, .50 + randomGaussian() * .10));
+      state.detection = { x: x, y: y };
+      ui.measureButton.textContent = "SYMULUJ PONOWNIE";
+      showToast("Wylosowano zdarzenie detekcji w modelu.");
+      haptic();
+    }
+
+    function animate(now) {
+      var delta = Math.min(.05, Math.max(0, (now - state.lastFrame) / 1000));
+      state.lastFrame = now;
+      if (!state.paused) state.simTime += delta;
+      drawScene();
+      drawCone();
+      drawLens();
+      requestAnimationFrame(animate);
+    }
+
+    function runChallenge() {
+      var start = performance.now();
+      var samples = 10000;
+      var tolerance = 1e-12;
+      var breaches = 0;
+      var maxError = 0;
+
+      for (var i = 0; i < samples; i += 1) {
+        var beta = -0.999 + (1.998 * i / (samples - 1));
+        var transformed = derive(beta);
+        var leftError = Math.abs(Math.abs(transformed.transformedLeftLight) - 1);
+        var rightError = Math.abs(Math.abs(transformed.transformedRightLight) - 1);
+        var error = Math.max(leftError, rightError);
+        if (error > maxError) maxError = error;
+        if (error > tolerance) breaches += 1;
+      }
+
+      state.challenge = {
+        samples: samples,
+        beta_min: -0.999,
+        beta_max: 0.999,
+        tolerance: tolerance,
+        breaches: breaches,
+        max_abs_error: Number(maxError.toExponential(12)),
+        duration_ms: Number((performance.now() - start).toFixed(3))
+      };
+
+      ui.challengeHeadline.textContent = breaches === 0 ? "INVARIANT HOLDS" : "BREACH DETECTED";
+      ui.challengeSamples.textContent = samples.toLocaleString("pl-PL");
+      ui.challengeBreaches.textContent = String(breaches);
+      ui.challengeBreaches.classList.toggle("pass", breaches === 0);
+      ui.challengeError.textContent = maxError.toExponential(3);
+      ui.challengeButton.textContent = "POWTÓRZ 10 000 PRÓB";
+      setStatus(ui.challengeStatus, breaches === 0 ? "PASS" : "FAIL", breaches === 0 ? "pass" : "fail");
+      invalidateRecord();
+      showToast(breaches === 0 ? "10 000 transformacji: brak naruszeń tolerancji." : "Test wykrył naruszenie. Rekord zablokowany.");
+      haptic();
+    }
+
+    async function runSelfTests() {
+      var failures = [];
+      [-.95, -.3, 0, .8, .95].forEach(function (beta) {
+        var result = derive(beta);
+        if (Math.abs(result.transformedLeftLight + 1) > 1e-12) failures.push("LEFT_C_" + beta);
+        if (Math.abs(result.transformedRightLight - 1) > 1e-12) failures.push("RIGHT_C_" + beta);
+        if (!Number.isFinite(result.gamma) || result.gamma < 1) failures.push("GAMMA_" + beta);
+      });
+
+      var knownHash = await sha256Hex("abc");
+      var expectedHash = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
+      if (knownHash !== expectedHash) failures.push("SHA256_ABC");
+
+      state.selfTestPass = failures.length === 0;
+      setStatus(ui.parityStatus, failures.some(function (value) { return value.indexOf("_C_") >= 0; }) ? "FAIL" : "PASS", failures.some(function (value) { return value.indexOf("_C_") >= 0; }) ? "fail" : "pass");
+      setStatus(ui.hashSelfTestStatus, knownHash === expectedHash ? "PASS" : "FAIL", knownHash === expectedHash ? "pass" : "fail");
+
+      if (state.selfTestPass) {
+        ui.modelVerdict.textContent = "ACT NOW";
+        ui.modelVerdict.className = "verdict act";
+        ui.modelReason.textContent = "MATH_SELF_TEST_PASS";
+      } else {
+        ui.modelVerdict.textContent = "REJECT";
+        ui.modelVerdict.className = "verdict reject";
+        ui.modelReason.textContent = "SELF_TEST_FAILED · " + failures.join(" · ");
+        ui.sealButton.disabled = true;
+      }
+    }
+
+    function makeRecordPayload() {
+      var values = derive(state.beta);
+      return {
+        protocol: "NEON-LIGHTFRAME/1.0",
+        record_type: "EDUCATIONAL_SIMULATION_RECEIPT",
+        record_id: "lf-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10),
+        sealed_at: new Date().toISOString(),
+        runtime: {
+          form: "single_html",
+          network_calls: 0,
+          external_measurement: false
+        },
+        input: {
+          beta_v_over_c: Number(state.beta.toFixed(6)),
+          selected_frame: state.frame,
+          source_direction: "RIGHT_OF_OBSERVER"
+        },
+        derived: {
+          gamma: Number(values.gamma.toFixed(12)),
+          proper_time_ratio: Number(values.properTimeRatio.toFixed(12)),
+          transformed_light_left_c: Number(values.transformedLeftLight.toFixed(12)),
+          transformed_light_right_c: Number(values.transformedRightLight.toFixed(12)),
+          doppler_incoming_from_right: Number(values.dopplerIncomingFromRight.toFixed(12))
+        },
+        checks: {
+          local_math_self_test: state.selfTestPass ? "PASS" : "FAIL",
+          astra_10000_grid: state.challenge,
+          external_physical_measurement: "MISSING"
+        },
+        proof_of_silence: {
+          model_claim: state.selfTestPass ? "ACT NOW" : "REJECT",
+          physical_measurement_claim: "SILENCE",
+          physical_reason_code: "NO_SENSOR_EVIDENCE"
+        },
+        claim_scope: "MODEL_ONLY_NOT_PHYSICAL_MEASUREMENT"
+      };
+    }
+
+    async function sealRecord() {
+      if (!state.selfTestPass) {
+        showToast("REJECT: lokalny self-test nie przeszedł.");
+        return;
+      }
+      var payload = makeRecordPayload();
+      var canonical = canonicalize(payload);
+      var hash = await sha256Hex(canonical);
+      state.sealed = { payload: payload, hash: hash };
+      state.verified = false;
+      ui.hashBox.textContent = "RECORD_HASH: " + hash;
+      setStatus(ui.recordStatus, "SEALED", "pass");
+      ui.verifyButton.disabled = false;
+      ui.exportButton.disabled = true;
+      showToast("Rekord zamknięty. Wymagana lokalna weryfikacja.");
+      haptic();
+    }
+
+    async function verifyRecord() {
+      if (!state.sealed) return;
+      var recomputed = await sha256Hex(canonicalize(state.sealed.payload));
+      state.verified = recomputed === state.sealed.hash;
+      setStatus(ui.recordStatus, state.verified ? "VERIFIED" : "FAIL", state.verified ? "pass" : "fail");
+      ui.exportButton.disabled = !state.verified;
+      ui.hashBox.textContent = (state.verified ? "VERIFIED_HASH: " : "HASH_MISMATCH: ") + state.sealed.hash;
+      showToast(state.verified ? "Integralność lokalnego rekordu potwierdzona." : "REJECT: rekord nie zgadza się z hashem.");
+      haptic();
+    }
+
+    function exportRecord() {
+      if (!state.sealed || !state.verified) return;
+      var output = {
+        payload: state.sealed.payload,
+        integrity: {
+          algorithm: "SHA-256",
+          canonicalization: "NEON-CANON/1_SORTED_KEYS",
+          record_hash: state.sealed.hash,
+          verification: "LOCAL_RECOMPUTATION_PASS",
+          signature: null
+        },
+        limitations: [
+          "Hash detects changes after sealing but does not prove authorship or trusted time.",
+          "This receipt records an educational simulation, not a physical measurement.",
+          "Numerical grid testing supports implementation behavior and is not a proof of relativity."
+        ]
+      };
+      var blob = new Blob([JSON.stringify(output, null, 2) + "\n"], { type: "application/json" });
+      var url = URL.createObjectURL(blob);
+      var anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = "neon-lightframe-receipt-" + new Date().toISOString().replace(/[:.]/g, "-") + ".json";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1200);
+      showToast("Wyeksportowano niepodpisany rekord JSON.");
+    }
+
+    ui.velocity.addEventListener("input", function () {
+      state.beta = Number(ui.velocity.value);
+      invalidateRecord();
+      updateReadouts();
+    });
+
+    document.querySelectorAll("[data-beta]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        state.beta = Number(button.dataset.beta);
+        ui.velocity.value = String(state.beta);
+        invalidateRecord();
+        updateReadouts();
+        haptic();
+      });
+    });
+
+    ui.labFrameButton.addEventListener("click", function () {
+      state.frame = "lab";
+      state.simTime = 0;
+      invalidateRecord();
+      updateReadouts();
+      haptic();
+    });
+
+    ui.observerFrameButton.addEventListener("click", function () {
+      state.frame = "observer";
+      state.simTime = 0;
+      invalidateRecord();
+      updateReadouts();
+      haptic();
+    });
+
+    ui.pauseButton.addEventListener("click", function () {
+      state.paused = !state.paused;
+      updateReadouts();
+      haptic();
+    });
+
+    ui.resetButton.addEventListener("click", function () {
+      state.beta = -0.30;
+      state.frame = "lab";
+      state.lensMode = "field";
+      state.simTime = 0;
+      state.detection = null;
+      ui.velocity.value = "-0.30";
+      ui.measureButton.textContent = "SYMULUJ DETEKCJĘ";
+      invalidateRecord();
+      updateReadouts();
+      showToast("Eksperyment przywrócony do β = −0.30.");
+      haptic();
+    });
+
+    ui.fieldModeButton.addEventListener("click", function () {
+      state.lensMode = "field";
+      state.detection = null;
+      ui.measureButton.textContent = "SYMULUJ DETEKCJĘ";
+      ui.lensTruth.textContent = "Pole jest rysowane jako funkcja położenia i czasu. Linia nie jest trajektorią fotonu.";
+      updateReadouts();
+      haptic();
+    });
+
+    ui.photonModeButton.addEventListener("click", function () {
+      state.lensMode = "photon";
+      ui.lensTruth.textContent = "To schemat prawdopodobieństwa detekcji, nie fotografia fotonu ani dosłowny obraz wirtualnych cząstek próżni.";
+      updateReadouts();
+      haptic();
+    });
+
+    ui.measureButton.addEventListener("click", simulateDetection);
+    ui.challengeButton.addEventListener("click", runChallenge);
+    ui.sealButton.addEventListener("click", sealRecord);
+    ui.verifyButton.addEventListener("click", verifyRecord);
+    ui.exportButton.addEventListener("click", exportRecord);
+
+    function updateRuntimeStatus() {
+      ui.runtimeStatus.textContent = navigator.onLine ? "RUNTIME EGRESS: 0" : "OFFLINE · ACTIVE";
+    }
+
+    window.addEventListener("online", updateRuntimeStatus);
+    window.addEventListener("offline", updateRuntimeStatus);
+    window.addEventListener("resize", function () {
+      drawScene();
+      drawCone();
+      drawLens();
+    });
+
+    updateRuntimeStatus();
+    updateReadouts();
+    runSelfTests();
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
