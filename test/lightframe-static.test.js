@@ -53,7 +53,8 @@ test("Lightframe includes the invariant, challenge, gate, and local receipt cont
     'ADAPTIVE_RENDERING_ONLY',
     'sampleGoal: 120',
     'physics_parameters_changed: false',
-    'proof_gate_changed: false'
+    'proof_gate_changed: false',
+    'collectOptimizationSample(observedRenderIntervalMs'
   ]) {
     assert.ok(html.includes(required), "missing required marker: " + required);
   }
