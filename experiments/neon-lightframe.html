@@ -1155,7 +1155,7 @@
       toast: document.getElementById("toast")
     };
 
-    var K256 = new Uint32Array([
+    var CANVAS_MONO = 'ui-monospace, "SFMono-Regular", "Roboto Mono", Consolas, monospace';\n\n    var K256 = new Uint32Array([
       0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
       0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
       0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
@@ -1480,7 +1480,7 @@
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.fillStyle = "rgba(255,207,92,.75)";
-      ctx.font = "700 10px " + getComputedStyle(document.documentElement).getPropertyValue("--mono");
+      ctx.font = "700 10px " + CANVAS_MONO;
       ctx.textAlign = "center";
       ctx.fillText("LOKALNE TERAZ", midpointX, 32);
       ctx.restore();
@@ -1528,7 +1528,7 @@
         ctx.fill();
         ctx.restore();
         ctx.fillStyle = "rgba(255,207,92,.83)";
-        ctx.font = "700 10px " + getComputedStyle(document.documentElement).getPropertyValue("--mono");
+        ctx.font = "700 10px " + CANVAS_MONO;
         ctx.textAlign = "center";
         ctx.fillText("ŹRÓDŁO", sourceX, y + 49);
       }
@@ -1561,13 +1561,13 @@
           drawArrow(ctx, observerX, y - 48, apparentVelocity > 0 ? 1 : -1, "#ff5b7d");
         }
         ctx.fillStyle = "rgba(220,236,248,.9)";
-        ctx.font = "700 10px " + getComputedStyle(document.documentElement).getPropertyValue("--mono");
+        ctx.font = "700 10px " + CANVAS_MONO;
         ctx.textAlign = "center";
         ctx.fillText("OBSERWATOR", observerX, y + 49);
       }
 
       ctx.fillStyle = "rgba(157,176,199,.72)";
-      ctx.font = "700 10px " + getComputedStyle(document.documentElement).getPropertyValue("--mono");
+      ctx.font = "700 10px " + CANVAS_MONO;
       ctx.textAlign = "left";
       ctx.fillText(state.frame === "lab" ? "FRAME · LABORATORIUM" : "FRAME · OBSERWATOR", 18, 22);
       ctx.fillStyle = "rgba(189,109,255,.75)";
@@ -1620,7 +1620,7 @@
       ctx.lineTo(originX, 16);
       ctx.stroke();
       ctx.fillStyle = "rgba(157,176,199,.82)";
-      ctx.font = "10px " + getComputedStyle(document.documentElement).getPropertyValue("--mono");
+      ctx.font = "10px " + CANVAS_MONO;
       ctx.fillText("x", width - 24, originY - 8);
       ctx.fillText("ct", originX + 8, 24);
       ctx.restore();
@@ -1652,7 +1652,7 @@
       glowDot(ctx, originX + displayedBeta * markerT * scale, originY - markerT * scale, 4.5, "#ffcf5c");
 
       ctx.fillStyle = "rgba(238,248,255,.82)";
-      ctx.font = "700 10px " + getComputedStyle(document.documentElement).getPropertyValue("--mono");
+      ctx.font = "700 10px " + CANVAS_MONO;
       ctx.textAlign = "center";
       ctx.fillText("ZDARZENIE", originX, originY + 22);
       ctx.fillStyle = "rgba(65,232,255,.8)";
@@ -1705,7 +1705,7 @@
           ctx.restore();
         });
         ctx.fillStyle = "rgba(238,248,255,.7)";
-        ctx.font = "700 10px " + getComputedStyle(document.documentElement).getPropertyValue("--mono");
+        ctx.font = "700 10px " + CANVAS_MONO;
         ctx.textAlign = "center";
         ctx.fillText("E(x,t) / B(x,t) · PROFILE", cx, cy + radius * .67);
       } else {
@@ -1747,7 +1747,7 @@
         }
 
         ctx.fillStyle = "rgba(238,248,255,.7)";
-        ctx.font = "700 10px " + getComputedStyle(document.documentElement).getPropertyValue("--mono");
+        ctx.font = "700 10px " + CANVAS_MONO;
         ctx.textAlign = "center";
         ctx.fillText("SCHEMAT |ψ|² · PRAWDOPODOBIEŃSTWO DETEKCJI", cx, cy + radius * .7);
       }
