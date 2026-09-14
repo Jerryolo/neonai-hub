@@ -1994,8 +1994,10 @@
       var delta = Math.min(.05, frameIntervalMs / 1000);
       state.lastFrame = now;
       if (!state.paused) state.simTime += delta;
+
       var o = state.optimization;
-      var drew = o.lastDrawAt === 0 || now - o.lastDrawAt >= o.renderIntervalMs - .5;
+      var observedRenderIntervalMs = o.lastDrawAt === 0 ? frameIntervalMs : now - o.lastDrawAt;
+      var drew = o.lastDrawAt === 0 || observedRenderIntervalMs >= o.renderIntervalMs - .5;
       var renderCostMs = 0;
       if (drew) {
         var renderStart = performance.now();
@@ -2005,7 +2007,7 @@
         renderCostMs = performance.now() - renderStart;
         o.lastDrawAt = now;
       }
-      collectOptimizationSample(frameIntervalMs, renderCostMs, drew, now);
+      collectOptimizationSample(observedRenderIntervalMs, renderCostMs, drew, now);
       requestAnimationFrame(animate);
     }
 
